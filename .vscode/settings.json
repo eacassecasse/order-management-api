@@ -1,0 +1,54 @@
+{
+    "sqltools.connections": [
+        {
+            "database": "mansto",
+            "dialect": "MySQL",
+            "name": "MYSQL 8.0.24",
+            "password": "@Pas1sword23",
+            "port": 3306,
+            "server": "127.0.0.1",
+            "username": "eacassecasse",
+            "driver": "MySQL"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "askForPassword": true,
+            "driver": "MySQL",
+            "name": "MYSQL",
+            "database": "mansto",
+            "username": "root"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "MYSQL",
+            "database": "mansto",
+            "username": "root",
+            "password": "@Pas1sword23"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "MYSQL",
+            "database": "mansto",
+            "username": "root",
+            "password": "@Pas1sword23"
+        }
+    ],
+    "php.version": "7.4.21"
+}

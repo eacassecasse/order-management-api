@@ -1,0 +1,27 @@
+{
+    "autoload": {
+        "psr-4": {
+            "App\\": "App"
+        },
+        "files": [
+            "config.php"
+        ]
+    },
+    "require": {
+        "firebase/php-jwt": "^6.0",
+        "paragonie/sodium_compat": "^1.17",
+        "willdurand/hateoas": "^3.8",
+        "twig/twig": "^3.3",
+        "symfony/routing": "^5.4",
+        "symfony/yaml": "^5.4",
+        "symfony/console": "^5.4",
+        "pagerfanta/pagerfanta": "^3.5",
+        "symfony/config": "^5.4",
+        "symfony/http-foundation": "^5.4",
+        "symfony/event-dispatcher": "^5.4",
+        "symfony/lock": "^5.4",
+        "symfony/process": "^5.4",
+        "symfony/dependency-injection": "^5.4",
+        "willdurand/hateoas-bundle": "^2.4"
+    }
+}
