@@ -111,8 +111,11 @@ class StorageService
 
         $found = $this->findOne($id);
 
-        $found->setDesignation($inputModel->getDesignation());
-
+        if ($inputModel->getDesignation() !== $found->getDesignation()) {
+            $found->setDesignation($inputModel->getDesignation());
+            $found->setCode($this->createCode($found));
+        }
+        
         $updatedStorage = Utilities::toStorage(
             $this->repository->update($found));
 
@@ -202,13 +205,7 @@ class StorageService
                 . 'this Storage');
         }
 
-        $products = array();
-
-        foreach ($storedProducts as $stored) {
-            array_push($products, $this->findProduct($stored->getProduct()->getId()));
-        }
-
-        return $products;
+        return $storedProducts;
     }
 
     public function edit(?StoredProductInputModel $inputModel): ?StoredProduct

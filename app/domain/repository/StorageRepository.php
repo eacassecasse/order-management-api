@@ -34,7 +34,7 @@ class StorageRepository extends GenericRepository
         try {
 
             $query = "INSERT INTO storage
-                        (desgination, code)
+                        (designation, code)
                       VALUES (?,?)";
 
             $statement = $this->executeStatement($query, array(

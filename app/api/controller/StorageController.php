@@ -4,9 +4,10 @@ namespace app\api\controller;
 
 use App\api\controller\BaseController;
 
-use App\api\model\ProductInputModel;
+use App\api\model\StorageInputModel;
+use App\api\model\StorageIdInputModel;
+use App\api\model\StoredProductInputModel;
 use App\api\model\ProductIdInputModel;
-use App\api\model\ValidityInputModel;
 
 use App\api\exceptionHandler\ApiExceptionHandler;
 
@@ -17,7 +18,7 @@ use App\domain\exception\ConnectionException;
 use App\domain\exception\EntityNotFoundException;
 use App\domain\exception\MYSQLTransactionException;
 
-use App\domain\service\ProductService;
+use App\domain\service\StorageService;
 
 use Hateoas\HateoasBuilder;
 use Hateoas\UrlGenerator\CallableUrlGenerator;
@@ -26,14 +27,18 @@ use Pagerfanta\Pagerfanta;
 use Hateoas\Representation\Factory\PagerfantaFactory;
 use Hateoas\Configuration\Route;
 
-class ProductController extends BaseController
+
+
+
+class StorageController extends BaseController
 {
+
     private $service;
     private $hateoas;
 
     public function __construct()
     {
-        $this->service = new ProductService();
+        $this->service = new StorageService();
 
         $urlGenerator = new CallableUrlGenerator(function ($route, $parameters) {
             return $route . '?' . http_build_query($parameters);
@@ -47,9 +52,9 @@ class ProductController extends BaseController
     /**
      * @method void create()
      * 
-     * "/v1/endpoints/products/create" Endpoint 
+     * "/v1/endpoints/storages/create" Endpoint 
      * 
-     * Creates a new product
+     * Creates a new storage
      */
     public function create()
     {
@@ -62,15 +67,13 @@ class ProductController extends BaseController
 
                 $data = json_decode(file_get_contents("php://input"));
 
-                $description = $this->clean($data->description);
-                $unit = $this->clean($data->unit);
+                $designation = $this->clean($data->designation);
 
-                $model = new ProductInputModel();
-                $model->setDescription($description);
-                $model->setUnit($unit);
+                $model = new StorageInputModel();
+                $model->setDesignation($designation);
 
                 $outputModel = $this->hateoas->serialize(
-                    Utilities::toProductOutputModel($this->service->create($model)), 'json');
+                    Utilities::toStorageOutputModel($this->service->create($model)), 'json');
 
             }
             catch (ConnectionException $connectionException) {
@@ -102,12 +105,12 @@ class ProductController extends BaseController
     /**
      * @method void findOne($id)
      * 
-     * "/v1/endpoints/Products/{id}" Endpoint 
+     * "/v1/endpoints/Storages/{id}" Endpoint 
      * 
-     * Get a product by a given ID
+     * Get a storage by a given ID
      * 
-     * You can either get a product by its description 
-     * or unit passing one of this variable as a query parameters
+     * You can either get a storage by its designation 
+     * or code passing one of this variable as a query parameters
      */
 
     public function findOne($id = null)
@@ -124,46 +127,28 @@ class ProductController extends BaseController
                 if ($id) {
 
                     $outputModel = $this->hateoas->serialize(
-                        Utilities::toProductOutputModel($this->service->findOne($id)), 'json');
+                        Utilities::toStorageOutputModel($this->service->findOne($id)), 'json');
                 }
                 else {
                     $query = parse_url(filter_input(INPUT_SERVER, 'REQUEST_URI'), PHP_URL_QUERY);
                     $toArrayQuery = parse_str($query, $arrayQuery);
 
                     if (count($arrayQuery)) {
-                        if (isset($arrayQuery['description'])) {
-                            $description = filter_var($arrayQuery['description'], FILTER_SANITIZE_SPECIAL_CHARS);
+                        if (isset($arrayQuery['designation'])) {
+                            $designation = filter_var($arrayQuery['designation'], FILTER_SANITIZE_SPECIAL_CHARS);
 
                             $outputModel = $this->hateoas->serialize(
-                                Utilities::toProductOutputModel(
-                                $this->service->findByDescription($description)), 'json');
+                                Utilities::toStorageOutputCollectionModel(
+                                $this->service->findByDesignation($designation)), 'json');
 
                         }
-                        else if (isset($arrayQuery['unit'])) {
+                        else if (isset($arrayQuery['code'])) {
                             $options = array("flags" => FILTER_VALIDATE_INT);
-                            $unit = filter_var($arrayQuery['unit'], FILTER_SANITIZE_SPECIAL_CHARS, $options);
+                            $code = filter_var($arrayQuery['code'], FILTER_SANITIZE_SPECIAL_CHARS, $options);
 
-                            if ($unit) {
-
-                                $adapter = new ArrayAdapter(
-                                    Utilities::toProductOutputCollectionModel($this->service->findByUnit($unit)));
-
-                                $pager = new Pagerfanta($adapter);
-
-                                if ($adapter->getNbResults() > 10) {
-                                    $pager->setMaxPerPage(8);
-                                }
-                                else {
-
-                                    $pager->setMaxPerPage(4);
-                                }
-
-                                $pagerFantaFactory = new PagerfantaFactory();
-
-                                $paginatedCollection = $pagerFantaFactory->createRepresentation(
-                                    $pager, new Route('/v1/endpoints/products/', array("unit"=>$unit)));
-
-                                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
+                            if ($code) {
+                                $outputModel = $this->hateoas->serialize(
+                                    Utilities::toStorageOutputModel($this->service->findByCode($code)), 'json');
                             }
                         }
                     }
@@ -206,9 +191,9 @@ class ProductController extends BaseController
     /**
      * @method void find()
      * 
-     * "/v1/endpoints/products" Endpoint 
+     * "/v1/endpoints/storages" Endpoint 
      * 
-     * Get a list of products
+     * Get a list of storages
      */
 
     public function find()
@@ -220,7 +205,7 @@ class ProductController extends BaseController
             try {
 
                 $adapter = new ArrayAdapter(
-                    Utilities::toProductOutputCollectionModel($this->service->findAll()));
+                    Utilities::toStorageOutputCollectionModel($this->service->findAll()));
 
                 $pager = new Pagerfanta($adapter);
 
@@ -235,7 +220,7 @@ class ProductController extends BaseController
                 $pagerFantaFactory = new PagerfantaFactory();
 
                 $paginatedCollection = $pagerFantaFactory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/products/', array()));
+                    $pager, new Route('/v1/endpoints/storages/', array()));
 
                 $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
             }
@@ -272,9 +257,9 @@ class ProductController extends BaseController
     /**
      * @method void update($id)
      * 
-     * "/v1/endpoints/products/{id}/update" Endpoint 
+     * "/v1/endpoints/storages/{id}/update" Endpoint 
      * 
-     * Updates a product with the given ID
+     * Updates a storage with the given ID
      */
 
     public function update(int $id)
@@ -290,14 +275,12 @@ class ProductController extends BaseController
                 $id = isset($id) ? 
                     filter_var($this->clean($id), FILTER_VALIDATE_INT) : 0;
 
-                $description = $this->clean($data->description);
-                $unit = $this->clean($data->unit);
+                $designation = $this->clean($data->designation);
 
-                $model = new ProductInputModel();
-                $model->setDescription($description);
-                $model->setUnit($unit);
+                $model = new StorageInputModel();
+                $model->setDesignation($designation);
 
-                $outputModel = $this->hateoas->serialize(Utilities::toProductOutputModel(
+                $outputModel = $this->hateoas->serialize(Utilities::toStorageOutputModel(
                     $this->service->update($id, $model)), 'json');
             }
             catch (ConnectionException $connectionException) {
@@ -337,9 +320,9 @@ class ProductController extends BaseController
     /**
      * @method void delete($id)
      * 
-     * "/v1/endpoints/products/{id}/delete" Endpoint 
+     * "/v1/endpoints/storages/{id}/delete" Endpoint 
      * 
-     * Delete a product with the given ID
+     * Delete a storage with the given ID
      */
 
     public function delete($id)
@@ -389,13 +372,13 @@ class ProductController extends BaseController
 
 
     /**
-     * @method void add($productId)
+     * @method void add($storageId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/add" Endpoint 
+     * "/v1/endpoints/storages/{storageId}/products/add" Endpoint 
      * 
-     * Adds a validity to a product with the given ID
+     * Adds a product to a storage with the given ID
      */
-    public function add($productId)
+    public function add($storageId)
     {
         $errorMessage = '';
         $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
@@ -406,19 +389,20 @@ class ProductController extends BaseController
 
                 $data = json_decode(file_get_contents("php://input"));
 
-                $ProductModel = new ProductIdInputModel();
-                $ProductModel->setId(filter_var($this->clean($productId)), FILTER_VALIDATE_INT);
+                $StorageModel = new StorageIdInputModel();
+                $StorageModel->setId(filter_var($this->clean($storageId)), FILTER_VALIDATE_INT);
 
+                $productModel = new ProductIdInputModel();
+                $productModel->setId($this->clean($data->productId));
 
-                $expirationDate = $this->clean($data->expirationDate);
                 $quantity = filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT);
 
-                $model = new ValidityInputModel();
-                $model->setProduct($ProductModel);
-                $model->setExpirationDate($expirationDate);
+                $model = new StoredProductInputModel();
+                $model->setStorage($StorageModel);
+                $model->setProduct($productModel);
                 $model->setQuantity($quantity);
 
-                $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
+                $outputModel = $this->hateoas->serialize(Utilities::toStoredProductOutputModel(
                     $this->service->add($model)
                 ), 'json');
             }
@@ -463,13 +447,13 @@ class ProductController extends BaseController
     }
 
     /**
-     * @method void view($productId, $validityId)
+     * @method void view($storageId, $productId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/{validitiesId}" Endpoint 
+     * "/v1/endpoints/storages/{storageId}/products/{productId}" Endpoint 
      * 
-     * View a validity to a product with the given ID
+     * Adds a product to a storage with the given ID
      */
-    public function view($productId, $validityId)
+    public function view($storageId, $productId)
     {
         $errorMessage = '';
         $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
@@ -478,19 +462,19 @@ class ProductController extends BaseController
 
             try {
 
+                $StorageId = filter_var($storageId, FILTER_VALIDATE_INT) ? 
+                    filter_var($storageId, FILTER_VALIDATE_INT) : 0;
+
                 $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
                     filter_var($productId, FILTER_VALIDATE_INT) : 0;
 
-                $validityId = filter_var($validityId, FILTER_VALIDATE_INT) ? 
-                    filter_var($validityId, FILTER_VALIDATE_INT) : 0;
-
-                if ($productId && $validityId) {
-                    $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
-                        $this->service->findOneValidity($productId, $validityId)), 'json');
+                if ($productId && $storageId) {
+                    $outputModel = $this->hateoas->serialize(Utilities::toStoredProductOutputModel(
+                        $this->service->findOneProduct($productId, $storageId)), 'json');
                 }
                 else {
                     $errorMessage = 'Provide valid parameters. Both parameters must be integer and greater than 0 {'
-                        . $productId . ', ' . $validityId . '}';
+                        . $StorageId . ', ' . $productId . '}';
                     $errorHeader = 'HTTP/1.1 400 Bad Request';
                 }
             }
@@ -535,14 +519,14 @@ class ProductController extends BaseController
     }
 
     /**
-     * @method void listValidities($productId)
+     * @method void list($storageId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/" Endpoint 
+     * "/v1/endpoints/storages/{storageId}/products/" Endpoint 
      * 
-     * Adds a validity to a product with the given ID
+     * Adds a product to a storage with the given ID
      */
 
-    public function listValidities($productId)
+    public function list($storageId)
     {
 
         $errorMessage = '';
@@ -551,10 +535,10 @@ class ProductController extends BaseController
         if (strtoupper($requestMethod) == 'GET') {
             try {
 
-                $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
+                $id = filter_var($this->clean($storageId), FILTER_VALIDATE_INT);
 
-                $adapter = new ArrayAdapter(Utilities::toValidityOutputCollectionModel(
-                    $this->service->listValidities($productId)
+                $adapter = new ArrayAdapter(Utilities::toStoredProductOutputCollectionModel(
+                    $this->service->listAll($storageId)
                 ));
 
                 $pager = new Pagerfanta($adapter);
@@ -562,7 +546,7 @@ class ProductController extends BaseController
                 $factory = new PagerfantaFactory();
 
                 $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/products/' . $productId . '/validities/', array()));
+                    $pager, new Route('/v1/endpoints/storages/' . $storageId . '/products/', array()));
 
                 $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
             }
@@ -602,14 +586,14 @@ class ProductController extends BaseController
     }
 
     /**
-     * @method void edit($productId, $validitiesId)
+     * @method void edit($storageId, $productId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/{validityId}/edit" Endpoint 
+     * "/v1/endpoints/storages/{storageId}/products/{productId}/edit" Endpoint 
      * 
-     * Updates a validity from a product with the given ID
+     * Updates a product from a storage with the given ID
      */
 
-    public function edit($productId, $validityId)
+    public function edit($storageId, $productId)
     {
 
         $errorMessage = '';
@@ -622,20 +606,20 @@ class ProductController extends BaseController
                 $data = json_decode(file_get_contents("php://input"));
 
                 $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
+                $productModel->setId(filter_var($this->clean($productId)), FILTER_VALIDATE_INT);
 
-                $validityId = filter_var($this->clean($validityId), FILTER_VALIDATE_INT);
+                $storageModel = new StorageIdInputModel();
+                $storageModel->setId(filter_var($this->clean($storageId)), FILTER_VALIDATE_INT);
 
-                $expirationDate = $this->clean($data->expirationDate);
                 $quantity = filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT);
 
-                $model = new ValidityInputModel();
+                $model = new StoredProductInputModel();
                 $model->setProduct($productModel);
-                $model->setExpirationDate($expirationDate);
+                $model->setStorage($storageModel);
                 $model->setQuantity($quantity);
 
-                $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
-                    $this->service->edit($validityId, $model)), 'json');
+                $outputModel = $this->hateoas->serialize(Utilities::toStoredProductOutputModel(
+                    $this->service->edit($model)), 'json');
             }
             catch (ConnectionException $connectionException) {
                 $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
@@ -678,14 +662,14 @@ class ProductController extends BaseController
     }
 
     /**
-     * @method void remove($productId, $validityId)
+     * @method void remove($storageId, $productId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/{validityId}/remove" Endpoint 
+     * "/v1/endpoints/storages/{storageId}/products/{productId}/remove" Endpoint 
      * 
-     * Removes a validity from a product with the given ID
+     * Removes a product from a storage with the given ID
      */
 
-    public function remove($productId, $validityId)
+    public function remove($storageId, $productId)
     {
 
         $errorMessage = '';
@@ -695,10 +679,20 @@ class ProductController extends BaseController
 
             try {
 
-                $productId = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
-                $validityId = filter_var($this->clean($validityId), FILTER_VALIDATE_INT);
+                $data = json_decode(file_get_contents("php://input"));
 
-                if ($this->service->remove($validityId, $productId)) {
+                $productModel = new ProductIdInputModel();
+                $productModel->setId(filter_var($this->clean($productId)), FILTER_VALIDATE_INT);
+
+                $storageModel = new StorageIdInputModel();
+                $storageModel->setId(filter_var($this->clean($storageId)), FILTER_VALIDATE_INT);
+
+
+                $model = new StoredProductInputModel();
+                $model->setProduct($productModel);
+                $model->setStorage($storageModel);
+
+                if ($this->service->remove($model)) {
                     $outputModel = '';
                 }
                 else {
@@ -745,141 +739,4 @@ class ProductController extends BaseController
             );
         }
     }
-
-
-    /**
-     * @method void listSuppliers($productId)
-     * 
-     * "/v1/endpoints/products/{productId}/suppliers/" Endpoint 
-     * 
-     * Get a list of supplier of the product with the given ID
-     */
-
-    public function listSuppliers($productId)
-    {
-
-        $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-
-        if (strtoupper($requestMethod) == 'GET') {
-            try {
-
-                $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
-
-                $adapter = new ArrayAdapter(Utilities::toSupplierOutputCollectionModel(
-                    $this->service->listSuppliers($productId)
-                ));
-
-                $pager = new Pagerfanta($adapter);
-
-                $factory = new PagerfantaFactory();
-
-                $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/products/' . $productId . '/suppliers/', array()));
-
-                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
-            }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-        }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
-        }
-
-        //Send Output
-        if (!($errorMessage)) {
-            $this->sendOutput(
-                $outputModel, array(
-                'Content-Type: application/json', 'HTTP/1.1 200 Ok')
-            );
-        }
-        else {
-            $this->sendOutput(json_encode(
-                array(
-                'error' => $errorMessage
-            ), JSON_PRETTY_PRINT), array(
-                'Content-Type: application/json', $errorHeader)
-            );
-        }
-    }
-
-
-    /**
-     * @method void listStorages($productId)
-     * 
-     * "/v1/endpoints/products/{productId}/storages/" Endpoint 
-     * 
-     * Get a list of storages of the product with the given ID
-     */
-
-    public function listStorages($productId)
-    {
-
-        $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-
-        if (strtoupper($requestMethod) == 'GET') {
-            try {
-
-                $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
-
-                $adapter = new ArrayAdapter(Utilities::toStorageOutputCollectionModel(
-                    $this->service->listStorages($productId)
-                ));
-
-                $pager = new Pagerfanta($adapter);
-
-                $factory = new PagerfantaFactory();
-
-                $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/products/' . $productId . '/suppliers/', array()));
-
-                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
-            }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-        }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
-        }
-
-        //Send Output
-        if (!($errorMessage)) {
-            $this->sendOutput(
-                $outputModel, array(
-                'Content-Type: application/json', 'HTTP/1.1 200 Ok')
-            );
-        }
-        else {
-            $this->sendOutput(json_encode(
-                array(
-                'error' => $errorMessage
-            ), JSON_PRETTY_PRINT), array(
-                'Content-Type: application/json', $errorHeader)
-            );
-        }
-    }
-
 }

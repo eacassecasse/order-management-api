@@ -94,6 +94,20 @@ class ProductService
         return $product;
     }
 
+    public function findByUnit(?string $unit): ?array
+    {
+
+        $products = Utilities::toProductCollection(
+            $this->repository->findByUnit($unit)
+        );
+
+        if (!($products)) {
+            throw new EntityNotFoundException('Product Not Found');
+        }
+
+        return $products;
+    }
+
     public function findAll(): ?array
     {
 

@@ -18,6 +18,8 @@ use Hateoas\Representation\Factory\PagerfantaFactory;
 use Pagerfanta\Adapter\ArrayAdapter;
 use Pagerfanta\Pagerfanta;
 use App\api\controller\SupplierController;
+use App\api\controller\StorageController;
+use App\api\controller\UserController;
 
 $url = parse_url(filter_input(\INPUT_SERVER, 'REQUEST_URI'), \PHP_URL_PATH);
 $url = explode('/', $url);
@@ -59,5 +61,5 @@ $hateoas = HateoasBuilder::create()->setUrlGenerator(null, $urlGenerator)->build
  $json = $hateoas->serialize($paginatedCollection, 'json');
  echo $json; //var_dump($router);*/
 
-$controller = new SupplierController();
-$controller->edit(1,1);
+$controller = new UserController();
+$controller->delete(2);

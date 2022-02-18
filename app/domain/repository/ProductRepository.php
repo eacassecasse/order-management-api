@@ -132,6 +132,30 @@ class ProductRepository extends GenericRepository
         return $product;
     }
 
+    public function findByUnit($unit)
+    {
+        try {
+
+            $query = "SELECT * FROM product WHERE measure_unit = ?";
+
+            $result = $this->select($query, array($unit));
+
+            if ($result->num_rows === 0) {
+                $products = null;
+            }
+
+            $products = array();
+
+            while ($product = $result->fetch_assoc()) {
+                array_push($products, $product);
+            }
+        }
+        catch (\mysqli_sql_exception $ex) {
+            throw new MYSQLTransactionException($ex->getMessage());
+        }
+
+        return $products;
+    }
     public function update($object)
     {
 

@@ -6,7 +6,7 @@ use JMS\Serializer\Annotation as Serializer;
 use Hateoas\Configuration\Annotation as Hateoas;
 
 /**
- * @Serializer\XmlRoot("user)
+ * @Serializer\XmlRoot("user")
  * 
  * @Hateoas\Relation("self", href="expr('/v1/endpoints/users/' ~object.getId())")
  */

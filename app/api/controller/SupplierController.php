@@ -107,9 +107,9 @@ class SupplierController extends BaseController
     /**
      * @method void findOne($id)
      * 
-     * "/v1/endpoints/suppliers/1" Endpoint 
+     * "/v1/endpoints/suppliers/{id}" Endpoint 
      * 
-     * Returns a supplier by a given ID
+     * Get a supplier by a given ID
      * 
      * You can either get a supplier by his name 
      * or vatNumber passing one of this variable as a query parameters
@@ -194,7 +194,7 @@ class SupplierController extends BaseController
      * 
      * "/v1/endpoints/suppliers" Endpoint 
      * 
-     * Returns a list of suppliers
+     * Get a list of suppliers
      */
 
     public function find()
@@ -258,7 +258,7 @@ class SupplierController extends BaseController
     /**
      * @method void update($id)
      * 
-     * "/v1/endpoints/suppliers/1/update" Endpoint 
+     * "/v1/endpoints/suppliers/{id}/update" Endpoint 
      * 
      * Updates a supplier with the given ID
      */
@@ -339,10 +339,13 @@ class SupplierController extends BaseController
 
                 $id = ($id) ? filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT)) : 0;
 
-                $outputModel = json_encode(
-                    array('deleted' =>
-                    ($this->service->delete($id)) ? 'sucessfully' : 'failed'
-                ), JSON_PRETTY_PRINT);
+                if ($this->service->delete($id)) {
+                    $outputModel = '';
+                }
+                else {
+                    $errorMessage = 'Oops! Something went wrong';
+                    $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+                }
             }
             catch (ConnectionException $connectionException) {
                 $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
@@ -374,7 +377,7 @@ class SupplierController extends BaseController
     /**
      * @method void add($supplierId)
      * 
-     * "/v1/endpoints/suppliers/{id}/products/add" Endpoint 
+     * "/v1/endpoints/suppliers/{supplierId}/products/add" Endpoint 
      * 
      * Adds a product to a supplier with the given ID
      */
@@ -402,7 +405,7 @@ class SupplierController extends BaseController
                 $model->setProduct($productModel);
                 $model->setPrice($price);
 
-                $outputModel = $this->hateoas->serialize(Utilities::toSupplierOutputModel(
+                $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModel(
                     $this->service->add($model)
                 ), 'json');
             }
@@ -504,7 +507,7 @@ class SupplierController extends BaseController
         if (!($errorMessage)) {
             $this->sendOutput(
                 $outputModel, array(
-                'Content-Type: application/json', 'HTTP/1.1 201 Created')
+                'Content-Type: application/json', 'HTTP/1.1 200 OK')
             );
         }
         else {
@@ -521,7 +524,7 @@ class SupplierController extends BaseController
     /**
      * @method void list($supplierId)
      * 
-     * "/v1/endpoints/suppliers/{id}/products/" Endpoint 
+     * "/v1/endpoints/suppliers/{supplierId}/products/" Endpoint 
      * 
      * Adds a product to a supplier with the given ID
      */
@@ -586,11 +589,11 @@ class SupplierController extends BaseController
     }
 
     /**
-     * @method void edit($supplierId, $product)
+     * @method void edit($supplierId, $productId)
      * 
      * "/v1/endpoints/suppliers/{supplierId}/products/{productId}/edit" Endpoint 
      * 
-     * Adds a product to a supplier with the given ID
+     * Updates a product from a supplier with the given ID
      */
 
     public function edit($supplierId, $productId)
@@ -618,7 +621,7 @@ class SupplierController extends BaseController
                 $model->setSupplier($supplierModel);
                 $model->setPrice($price);
 
-                $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModelselect * from supplier_products;(
+                $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModel(
                     $this->service->edit($model)), 'json');
             }
             catch (ConnectionException $connectionException) {
@@ -647,7 +650,7 @@ class SupplierController extends BaseController
         if (!($errorMessage)) {
             $this->sendOutput(
                 $outputModel, array(
-                'Content-Type: application/json', 'HTTP/1.1 201 Created')
+                'Content-Type: application/json', 'HTTP/1.1 200 OK')
             );
         }
         else {
@@ -659,7 +662,84 @@ class SupplierController extends BaseController
             )
             );
         }
-
     }
 
+    /**
+     * @method void remove($supplierId, $productId)
+     * 
+     * "/v1/endpoints/suppliers/{supplierId}/products/{productId}/remove" Endpoint 
+     * 
+     * Removes a product from a supplier with the given ID
+     */
+
+    public function remove($supplierId, $productId)
+    {
+
+        $errorMessage = '';
+        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+
+        if (strtoupper($requestMethod) == 'DELETE') {
+
+            try {
+
+                $data = json_decode(file_get_contents("php://input"));
+
+                $productModel = new ProductIdInputModel();
+                $productModel->setId(filter_var($this->clean($productId)), FILTER_VALIDATE_INT);
+
+                $supplierModel = new SupplierIdInputModel();
+                $supplierModel->setId(filter_var($this->clean($supplierId)), FILTER_VALIDATE_INT);
+
+
+                $model = new SupplierProductInputModel();
+                $model->setProduct($productModel);
+                $model->setSupplier($supplierModel);
+
+                if ($this->service->remove($model)) {
+                    $outputModel = '';
+                }
+                else {
+                    $errorMessage = 'Oops! Something went wrong';
+                    $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+                }
+            }
+            catch (ConnectionException $connectionException) {
+                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+            }
+            catch (MYSQLTransactionException $mysqlTransactionException) {
+                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
+            }
+            catch (EntityNotFoundException $entityNotFoundException) {
+                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+                $errorHeader = 'HTTP/1.1 404 Not Found';
+            }
+            catch (BusinessException $businessException) {
+                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
+            }
+        }
+        else {
+            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
+            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        }
+
+        //Send Output
+        if (!($errorMessage)) {
+            $this->sendOutput(
+                $outputModel, array(
+                'Content-Type: application/json', 'HTTP/1.1 204 No Content')
+            );
+        }
+        else {
+            $this->sendOutput(
+                json_encode(array(
+                'error' => $errorMessage
+            )), array(
+                'Content-Type: application/json', $errorHeader
+            )
+            );
+        }
+    }
 }

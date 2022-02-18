@@ -61,7 +61,7 @@ class BaseController
     protected function clean($input)
     {
 
-        $input = filter_var($input, \FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $input = filter_var($input, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
         return $input;
     }
