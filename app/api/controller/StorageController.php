@@ -28,8 +28,6 @@ use Hateoas\Representation\Factory\PagerfantaFactory;
 use Hateoas\Configuration\Route;
 
 
-
-
 class StorageController extends BaseController
 {
 
@@ -67,7 +65,16 @@ class StorageController extends BaseController
 
                 $data = json_decode(file_get_contents("php://input"));
 
-                $designation = $this->clean($data->designation);
+                if (!isset($data) || !isset($data->designation)) {
+                    $designation = isset($data->designation) ? $this->clean($data->designation) : '';
+                }
+                else {
+                    throw new BusinessException('Please provide valid value for designation [Not Null and Not Blank].');
+                }
+
+                if (!$designation || substr($designation, 0, 1) === ' ') {
+                    throw new BusinessException('Please provide valid value for designation [Not Null and Not Blank].');
+                }
 
                 $model = new StorageInputModel();
                 $model->setDesignation($designation);
@@ -122,10 +129,9 @@ class StorageController extends BaseController
 
             try {
 
-                $id = filter_var($id, FILTER_VALIDATE_INT);
+                $id = filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT));
 
                 if ($id) {
-
                     $outputModel = $this->hateoas->serialize(
                         Utilities::toStorageOutputModel($this->service->findOne($id)), 'json');
                 }
@@ -135,7 +141,7 @@ class StorageController extends BaseController
 
                     if (count($arrayQuery)) {
                         if (isset($arrayQuery['designation'])) {
-                            $designation = filter_var($arrayQuery['designation'], FILTER_SANITIZE_SPECIAL_CHARS);
+                            $designation = filter_var($arrayQuery['designation'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
                             $outputModel = $this->hateoas->serialize(
                                 Utilities::toStorageOutputCollectionModel(
@@ -144,7 +150,7 @@ class StorageController extends BaseController
                         }
                         else if (isset($arrayQuery['code'])) {
                             $options = array("flags" => FILTER_VALIDATE_INT);
-                            $code = filter_var($arrayQuery['code'], FILTER_SANITIZE_SPECIAL_CHARS, $options);
+                            $code = filter_var($arrayQuery['code'], FILTER_SANITIZE_FULL_SPECIAL_CHARS, $options);
 
                             if ($code) {
                                 $outputModel = $this->hateoas->serialize(
@@ -153,8 +159,7 @@ class StorageController extends BaseController
                         }
                     }
                     else {
-                        $errorMessage = 'Provide a valid ID please!';
-                        $errorHeader = 'HTTP/1.1 400 Bad Request';
+                        throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
                     }
                 }
             }
@@ -169,6 +174,10 @@ class StorageController extends BaseController
             catch (EntityNotFoundException $entityNotFoundException) {
                 $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
                 $errorHeader = 'HTTP/1.1 404 Not Found';
+            }
+            catch (BusinessException $businessException) {
+                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
         else {
@@ -275,7 +284,20 @@ class StorageController extends BaseController
                 $id = isset($id) ? 
                     filter_var($this->clean($id), FILTER_VALIDATE_INT) : 0;
 
-                $designation = $this->clean($data->designation);
+                if (!isset($data) || !isset($data->designation)) {
+                    $designation = isset($data->designation) ? $this->clean($data->designation) : '';
+                }
+                else {
+                    throw new BusinessException('Please provide valid value for designation [Not Null and Not Blank].');
+                }
+
+                if (!$designation || substr($designation, 0, 1) === ' ') {
+                    throw new BusinessException('Please provide valid value for designation [Not Null and Not Blank].');
+                }
+
+                if (!$id || !$designation || substr($designation, 0, 1) === ' ') {
+                    throw new BusinessException('Please provide valid values for {id}, {designation}');
+                }
 
                 $model = new StorageInputModel();
                 $model->setDesignation($designation);
@@ -336,6 +358,10 @@ class StorageController extends BaseController
 
                 $id = ($id) ? filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT)) : 0;
 
+                if (!$id) {
+                    throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
+                }
+
                 if ($this->service->delete($id)) {
                     $outputModel = '';
                 }
@@ -351,6 +377,10 @@ class StorageController extends BaseController
             catch (EntityNotFoundException $entityNotFoundException) {
                 $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
                 $errorHeader = 'HTTP/1.1 404 Not Found';
+            }
+            catch (BusinessException $businessException) {
+                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
         else {
@@ -389,16 +419,35 @@ class StorageController extends BaseController
 
                 $data = json_decode(file_get_contents("php://input"));
 
-                $StorageModel = new StorageIdInputModel();
-                $StorageModel->setId(filter_var($this->clean($storageId)), FILTER_VALIDATE_INT);
+                $storageModel = new StorageIdInputModel();
+                $storageModel->setId(filter_var($this->clean($storageId), FILTER_VALIDATE_INT));
+
+                if (isset($data)) {
+                    $productId = isset($data->productId) ? filter_var($this->clean($data->productId), FILTER_VALIDATE_INT) : 0;
+                    $quantity = isset($data->quantity) ? filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT) : 0;
+
+                }
+                else {
+                    throw new BusinessException('Please provide valid values for productId and quantity [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$productId && !$quantity) {
+                    throw new BusinessException('Please provide valid values for productId and quantity [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$productId) {
+                    throw new BusinessException('Please provide valid value for productId [Not Null and Not Blank or Greater than 0]');
+                }
+
+                if (!$quantity) {
+                    throw new BusinessException('Please provide valid value for quantity [Not Null and Not Blank or Greater than 0]');
+                }
 
                 $productModel = new ProductIdInputModel();
-                $productModel->setId($this->clean($data->productId));
-
-                $quantity = filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT);
+                $productModel->setId($productId);
 
                 $model = new StoredProductInputModel();
-                $model->setStorage($StorageModel);
+                $model->setStorage($storageModel);
                 $model->setProduct($productModel);
                 $model->setQuantity($quantity);
 
@@ -462,7 +511,7 @@ class StorageController extends BaseController
 
             try {
 
-                $StorageId = filter_var($storageId, FILTER_VALIDATE_INT) ? 
+                $storageId = filter_var($storageId, FILTER_VALIDATE_INT) ? 
                     filter_var($storageId, FILTER_VALIDATE_INT) : 0;
 
                 $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
@@ -473,9 +522,7 @@ class StorageController extends BaseController
                         $this->service->findOneProduct($productId, $storageId)), 'json');
                 }
                 else {
-                    $errorMessage = 'Provide valid parameters. Both parameters must be integer and greater than 0 {'
-                        . $StorageId . ', ' . $productId . '}';
-                    $errorHeader = 'HTTP/1.1 400 Bad Request';
+                    throw new BusinessException('Please provide valid values for productId and storageId Not Null and Not Blank or Greater than 0].');
                 }
             }
             catch (ConnectionException $connectionException) {
@@ -537,8 +584,12 @@ class StorageController extends BaseController
 
                 $id = filter_var($this->clean($storageId), FILTER_VALIDATE_INT);
 
+                if (!$id) {
+                    throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
+                }
+
                 $adapter = new ArrayAdapter(Utilities::toStoredProductOutputCollectionModel(
-                    $this->service->listAll($storageId)
+                    $this->service->listAll($id)
                 ));
 
                 $pager = new Pagerfanta($adapter);
@@ -546,7 +597,7 @@ class StorageController extends BaseController
                 $factory = new PagerfantaFactory();
 
                 $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/storages/' . $storageId . '/products/', array()));
+                    $pager, new Route('/v1/endpoints/storages/' . $id . '/products/', array()));
 
                 $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
             }
@@ -561,6 +612,10 @@ class StorageController extends BaseController
             catch (EntityNotFoundException $entityNotFoundException) {
                 $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
                 $errorHeader = 'HTTP/1.1 404 Not Found';
+            }
+            catch (BusinessException $businessException) {
+                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
         else {
@@ -605,13 +660,32 @@ class StorageController extends BaseController
 
                 $data = json_decode(file_get_contents("php://input"));
 
+                if (isset($data)) {
+                    $productId = isset($data->productId) ? filter_var($this->clean($data->productId), FILTER_VALIDATE_INT) : 0;
+                    $quantity = isset($data->quantity) ? filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT) : 0;
+
+                }
+                else {
+                    throw new BusinessException('Please provide valid values for productId and quantity [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$productId && !$quantity) {
+                    throw new BusinessException('Please provide valid values for productId and quantity [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$productId) {
+                    throw new BusinessException('Please provide valid value for productId [Not Null and Not Blank or Greater than 0]');
+                }
+
+                if (!$quantity) {
+                    throw new BusinessException('Please provide valid value for quantity [Not Null and Not Blank or Greater than 0]');
+                }
+
                 $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId)), FILTER_VALIDATE_INT);
+                $productModel->setId($productId);
 
                 $storageModel = new StorageIdInputModel();
-                $storageModel->setId(filter_var($this->clean($storageId)), FILTER_VALIDATE_INT);
-
-                $quantity = filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT);
+                $storageModel->setId(filter_var($this->clean($storageId), FILTER_VALIDATE_INT));
 
                 $model = new StoredProductInputModel();
                 $model->setProduct($productModel);
@@ -682,11 +756,14 @@ class StorageController extends BaseController
                 $data = json_decode(file_get_contents("php://input"));
 
                 $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId)), FILTER_VALIDATE_INT);
+                $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
 
                 $storageModel = new StorageIdInputModel();
-                $storageModel->setId(filter_var($this->clean($storageId)), FILTER_VALIDATE_INT);
+                $storageModel->setId(filter_var($this->clean($storageId), FILTER_VALIDATE_INT));
 
+                if (!$productModel->getId() || $storageModel->getId()) {
+                    throw new BusinessException('Please provide valid values for productId and storageId [Not Null and Not Blank or Greater than 0].');
+                }
 
                 $model = new StoredProductInputModel();
                 $model->setProduct($productModel);

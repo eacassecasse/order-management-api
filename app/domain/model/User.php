@@ -46,4 +46,22 @@ class User extends ObjectModel
         $this->password = $password;
     }
 
+    public function __equals($object): ?bool
+    {
+
+        if ($object == null) {
+            return false;
+        }
+
+        if ($this == $object) {
+            return true;
+        }
+
+        if (!($object instanceof User)) {
+            return false;
+        }
+
+        return $object->getEmail() == $this->getEmail();
+    }
+
 }

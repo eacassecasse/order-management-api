@@ -22,6 +22,8 @@ use App\domain\repository\SupplierRepository;
 use App\domain\repository\StoredProductRepository;
 use App\domain\repository\SupplierProductRepository;
 use App\domain\repository\ValidityRepository;
+use app\domain\model\Supplier;
+use app\domain\model\Storage;
 
 class ProductService
 {
@@ -315,6 +317,41 @@ class ProductService
         return $suppliers;
     }
 
+    public function viewSupplier(?int $productId, ?int $supplierId): ?Supplier
+    {
+
+        $product = $this->findOne($productId);
+
+        $supplierProduct = new SupplierProduct();
+        $supplierProduct->setProduct($product);
+
+        $supplierProducts = Utilities::toSupplierProductCollection(
+            $this->supplierProductRepository->findByProduct($supplierProduct)
+        );
+
+        if (!($supplierProducts)) {
+            throw new EntityNotFoundException('This product is not supplied by this Supplier');
+        }
+
+        $supplier = null;
+
+        foreach ($supplierProducts as $supplied) {
+            if ($supplied instanceof SupplierProduct) {
+                if ($supplied->getSupplier()->getId() === $supplierId) {
+                    $supplier = Utilities::toSupplier(
+                        $this->supplierRepository->findOne($supplierId)
+                    );
+
+                    return $supplier;
+                }
+            }
+        }
+
+        if (!($supplier)) {
+            throw new EntityNotFoundException('This product is not supplied by this Supplier');
+        }
+    }
+
     public function listStorages(?int $productId): ?array
     {
 
@@ -340,6 +377,41 @@ class ProductService
         }
 
         return $storages;
+    }
+
+    public function viewStorage(?int $productId, ?int $storageId): ?Storage
+    {
+
+        $product = $this->findOne($productId);
+
+        $storedProduct = new StoredProduct();
+        $storedProduct->setProduct($product);
+
+        $storedProducts = Utilities::toStoredProductCollection(
+            $this->storedProductRepository->findByProduct($storedProduct)
+        );
+
+        if (!($storedProducts)) {
+            throw new EntityNotFoundException('This product is not stored on this Storage');
+        }
+
+        $storage = null;
+
+        foreach ($storedProducts as $stored) {
+            if ($stored instanceof StoredProduct) {
+                if ($stored->getStorage()->getId() === $storageId) {
+                    $storage = Utilities::toStorage(
+                        $this->storageRepository->findOne($storageId)
+                    );
+
+                    return $storage;
+                }
+            }
+        }
+
+        if (!($storage)) {
+            throw new EntityNotFoundException('This product is not stored on this Storage');
+        }
     }
 
 }

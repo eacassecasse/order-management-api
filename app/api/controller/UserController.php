@@ -60,8 +60,26 @@ class UserController extends BaseController
 
                 $data = json_decode(file_get_contents("php://input"));
 
-                $email = filter_var($this->clean($data->email), FILTER_VALIDATE_EMAIL);
-                $password = $this->clean($data->password);
+                if (isset($data)) {
+                    $email = isset($data->email) ? filter_var($this->clean($data->email), FILTER_VALIDATE_EMAIL) : '';
+                    $password = isset($data->password) ? $this->clean($data->password) : '';
+                }
+                else {
+                    throw new BusinessException('Please provide valid values for email and password [Not Null and Not Blank].');
+                }
+
+                if (!$email && !$password) {
+                    throw new BusinessException('Please provide valid values for email and password [Not Null and Not Blank].');
+                }
+
+                if (!$email || substr($email, 0, 1) === ' ') {
+                    throw new BusinessException('Please provide valid value for email [Not Null and Not Blank].');
+                }
+
+                if (!$password) {
+                    throw new BusinessException('Please provide valid value for password [Not Null and Not Blank].');
+                }
+
 
                 $model = new UserInputModel();
                 $model->setEmail($email);
@@ -117,10 +135,9 @@ class UserController extends BaseController
 
             try {
 
-                $id = filter_var($id, FILTER_VALIDATE_INT);
+                $id = filter_var($this->clean($id), FILTER_VALIDATE_INT);
 
                 if ($id) {
-
                     $outputModel = $this->hateoas->serialize(
                         Utilities::toUserOutputModel($this->service->findOne($id)), 'json');
                 }
@@ -130,7 +147,7 @@ class UserController extends BaseController
 
                     if (count($arrayQuery)) {
                         if (isset($arrayQuery['email'])) {
-                            $email = filter_var($arrayQuery['email'], FILTER_SANITIZE_SPECIAL_CHARS);
+                            $email = filter_var($this->clean($arrayQuery['email']), FILTER_VALIDATE_EMAIL);
 
                             $outputModel = $this->hateoas->serialize(
                                 Utilities::toUserOutputModel(
@@ -139,8 +156,7 @@ class UserController extends BaseController
                         }
                     }
                     else {
-                        $errorMessage = 'Provide a valid ID please!';
-                        $errorHeader = 'HTTP/1.1 400 Bad Request';
+                        throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
                     }
                 }
             }
@@ -155,6 +171,10 @@ class UserController extends BaseController
             catch (EntityNotFoundException $entityNotFoundException) {
                 $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
                 $errorHeader = 'HTTP/1.1 404 Not Found';
+            }
+            catch (BusinessException $businessException) {
+                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
         else {
@@ -261,8 +281,25 @@ class UserController extends BaseController
                 $id = isset($id) ? 
                     filter_var($this->clean($id), FILTER_VALIDATE_INT) : 0;
 
-                $email = $this->validEmail($this->clean($data->email));
-                $password = $this->clean($data->password);
+                if (isset($data)) {
+                    $email = isset($data->email) ? filter_var($this->clean($data->email), FILTER_VALIDATE_EMAIL) : '';
+                    $password = isset($data->password) ? $this->clean($data->password) : '';
+                }
+                else {
+                    throw new BusinessException('Please provide valid values for email and password [Not Null and Not Blank].');
+                }
+
+                if (!$email && !$password) {
+                    throw new BusinessException('Please provide valid values for email and password [Not Null and Not Blank].');
+                }
+
+                if (!$email || substr($email, 0, 1) === ' ') {
+                    throw new BusinessException('Please provide valid value for email [Not Null and Not Blank].');
+                }
+
+                if (!$password) {
+                    throw new BusinessException('Please provide valid value for password [Not Null and Not Blank].');
+                }
 
                 $model = new UserInputModel();
                 $model->setEmail($email);
@@ -324,6 +361,10 @@ class UserController extends BaseController
 
                 $id = ($id) ? filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT)) : 0;
 
+                if (!$id) {
+                    throw new BusinessException('Please provide a valid ID');
+                }
+
                 if ($this->service->delete($id)) {
                     $outputModel = '';
                 }
@@ -339,6 +380,10 @@ class UserController extends BaseController
             catch (EntityNotFoundException $entityNotFoundException) {
                 $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
                 $errorHeader = 'HTTP/1.1 404 Not Found';
+            }
+            catch (BusinessException $businessException) {
+                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
         else {

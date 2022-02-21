@@ -67,8 +67,25 @@ class SupplierController extends BaseController
 
                 $data = json_decode(file_get_contents("php://input"));
 
-                $name = $this->clean($data->name);
-                $vatNumber = $this->clean($data->vatNumber);
+                if (isset($data)) {
+                    $name = isset($data->name) ? $this->clean($data->name) : '';
+                    $vatNumber = isset($data->vatNumber) ? filter_var($this->clean($data->vatNumber), FILTER_VALIDATE_INT) : 0;
+                }
+                else {
+                    throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$vatNumber and (!$name || substr($name, 0, 1) === ' ')) {
+                    throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$name || substr($name, 0, 1) === ' ') {
+                    throw new BusinessException('Please provide valid value for name [Not Null and Not Blank].');
+                }
+
+                if (!$vatNumber) {
+                    throw new BusinessException('Please provide valid value for vatNumber [Not Null and Not Blank or Greater than 0].');
+                }
 
                 $model = new SupplierInputModel();
                 $model->setName($name);
@@ -124,7 +141,7 @@ class SupplierController extends BaseController
 
             try {
 
-                $id = filter_var($id, FILTER_VALIDATE_INT);
+                $id = filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT));
 
                 if ($id) {
 
@@ -137,7 +154,7 @@ class SupplierController extends BaseController
 
                     if (count($arrayQuery)) {
                         if (isset($arrayQuery['name'])) {
-                            $name = filter_var($arrayQuery['name'], FILTER_SANITIZE_SPECIAL_CHARS);
+                            $name = filter_var($arrayQuery['name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
                             $outputModel = $this->hateoas->serialize(
                                 Utilities::toSupplierOutputModel($this->service->findByName($name)), 'json');
@@ -145,7 +162,7 @@ class SupplierController extends BaseController
                         }
                         else if (isset($arrayQuery['vatNumber'])) {
                             $options = array("flags" => FILTER_VALIDATE_INT);
-                            $vatNumber = filter_var($arrayQuery['vatNumber'], FILTER_SANITIZE_SPECIAL_CHARS, $options);
+                            $vatNumber = filter_var($arrayQuery['vatNumber'], FILTER_SANITIZE_FULL_SPECIAL_CHARS, $options);
 
                             if ($vatNumber) {
                                 $outputModel = $this->hateoas->serialize(
@@ -154,8 +171,7 @@ class SupplierController extends BaseController
                         }
                     }
                     else {
-                        $errorMessage = 'Provide a valid ID please!';
-                        $errorHeader = 'HTTP/1.1 400 Bad Request';
+                        throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
                     }
                 }
             }
@@ -170,6 +186,10 @@ class SupplierController extends BaseController
             catch (EntityNotFoundException $entityNotFoundException) {
                 $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
                 $errorHeader = 'HTTP/1.1 404 Not Found';
+            }
+            catch (BusinessException $businessException) {
+                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
         else {
@@ -276,8 +296,25 @@ class SupplierController extends BaseController
                 $id = isset($id) ? 
                     filter_var($this->clean($id), FILTER_VALIDATE_INT) : 0;
 
-                $name = $this->clean($data->name);
-                $vatNumber = $this->clean($data->vatNumber);
+                if (isset($data)) {
+                    $name = isset($data->name) ? $this->clean($data->name) : '';
+                    $vatNumber = isset($data->vatNumber) ? filter_var($this->clean($data->vatNumber), FILTER_VALIDATE_INT) : 0;
+                }
+                else {
+                    throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$vatNumber and (!$name || substr($name, 0, 1) === ' ')) {
+                    throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$name || substr($name, 0, 1) === ' ') {
+                    throw new BusinessException('Please provide valid value for name [Not Null and Not Blank].');
+                }
+
+                if (!$vatNumber) {
+                    throw new BusinessException('Please provide valid value for vatNumber [Not Null and Not Blank or Greater than 0].');
+                }
 
                 $model = new SupplierInputModel();
                 $model->setName($name);
@@ -339,6 +376,10 @@ class SupplierController extends BaseController
 
                 $id = ($id) ? filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT)) : 0;
 
+                if (!$id) {
+                    throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
+                }
+
                 if ($this->service->delete($id)) {
                     $outputModel = '';
                 }
@@ -354,6 +395,10 @@ class SupplierController extends BaseController
             catch (EntityNotFoundException $entityNotFoundException) {
                 $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
                 $errorHeader = 'HTTP/1.1 404 Not Found';
+            }
+            catch (BusinessException $businessException) {
+                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+                $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
         else {
@@ -393,12 +438,30 @@ class SupplierController extends BaseController
                 $data = json_decode(file_get_contents("php://input"));
 
                 $supplierModel = new SupplierIdInputModel();
-                $supplierModel->setId(filter_var($this->clean($supplierId)), FILTER_VALIDATE_INT);
+                $supplierModel->setId(filter_var($this->clean($supplierId), FILTER_VALIDATE_INT));
+
+                if (isset($data)) {
+                    $productId = isset($data->productId) ? filter_var($this->clean($data->productId), FILTER_VALIDATE_INT) : 0;
+                    $price = isset($data->price) ? filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT) : 0;
+                }
+                else {
+                    throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$productId && !$price) {
+                    throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$productId) {
+                    throw new BusinessException('Please provide valid value for productId [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$price) {
+                    throw new BusinessException('Please provide valid value price [Not Null and Not Blank or Greater than 0].');
+                }
 
                 $productModel = new ProductIdInputModel();
-                $productModel->setId($this->clean($data->productId));
-
-                $price = filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT);
+                $productModel->setId($productId);
 
                 $model = new SupplierProductInputModel();
                 $model->setSupplier($supplierModel);
@@ -476,9 +539,7 @@ class SupplierController extends BaseController
                         $this->service->findOneProduct($productId, $supplierId)), 'json');
                 }
                 else {
-                    $errorMessage = 'Provide valid parameters. Both parameters must be integer and greater than 0 {'
-                        . $supplierId . ', ' . $productId . '}';
-                    $errorHeader = 'HTTP/1.1 400 Bad Request';
+                    throw new BusinessException('Please provide valid values for productId and supplierId [Not Null and Not Blank or Greater than 0].');
                 }
             }
             catch (ConnectionException $connectionException) {
@@ -540,8 +601,12 @@ class SupplierController extends BaseController
 
                 $id = filter_var($this->clean($supplierId), FILTER_VALIDATE_INT);
 
+                if (!$id) {
+                    throw new BusinessException('Please provide a valid supplierId [Not Null and Not Blank or Greater than 0].');
+                }
+
                 $adapter = new ArrayAdapter(Utilities::toSupplierProductOutputCollectionModel(
-                    $this->service->listProducts($supplierId)
+                    $this->service->listProducts($id)
                 ));
 
                 $pager = new Pagerfanta($adapter);
@@ -549,7 +614,7 @@ class SupplierController extends BaseController
                 $factory = new PagerfantaFactory();
 
                 $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/suppliers/' . $supplierId . '/products/', array()));
+                    $pager, new Route('/v1/endpoints/suppliers/' . $id . '/products/', array()));
 
                 $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
             }
@@ -609,10 +674,29 @@ class SupplierController extends BaseController
                 $data = json_decode(file_get_contents("php://input"));
 
                 $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId)), FILTER_VALIDATE_INT);
+                $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
+
+                if (isset($data)) {
+                    $price = isset($data->price) ? filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT) : 0;
+                }
+                else {
+                    throw new BusinessException('Please provide valid value for price [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$productId && !$price) {
+                    throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$productId) {
+                    throw new BusinessException('Please provide valid value for productId [Not Null and Not Blank or Greater than 0].');
+                }
+
+                if (!$price) {
+                    throw new BusinessException('Please provide valid value price [Not Null and Not Blank or Greater than 0].');
+                }
 
                 $supplierModel = new SupplierIdInputModel();
-                $supplierModel->setId(filter_var($this->clean($supplierId)), FILTER_VALIDATE_INT);
+                $supplierModel->setId(filter_var($this->clean($supplierId), FILTER_VALIDATE_INT));
 
                 $price = filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT);
 
@@ -685,11 +769,14 @@ class SupplierController extends BaseController
                 $data = json_decode(file_get_contents("php://input"));
 
                 $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId)), FILTER_VALIDATE_INT);
+                $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
 
                 $supplierModel = new SupplierIdInputModel();
-                $supplierModel->setId(filter_var($this->clean($supplierId)), FILTER_VALIDATE_INT);
+                $supplierModel->setId(filter_var($this->clean($supplierId), FILTER_VALIDATE_INT));
 
+                if (!$productModel->getId() || !$supplierModel->getId()) {
+                    throw new BusinessException('Please provide valid values for productId and supplierId [Not Null and Not Blank or Greater than 0].');
+                }
 
                 $model = new SupplierProductInputModel();
                 $model->setProduct($productModel);
