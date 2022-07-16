@@ -13,11 +13,11 @@ class ConnectionFactory
 
     private function __construct()
     {
-        $this->host = DB_HOST;
-        $this->username = DB_USERNAME;
-        $this->password = DB_PASSWORD;
-        $this->database = DB_NAME;
-        $this->port = DB_PORT;
+        $this->host = getenv('DB_HOST');
+        $this->username = getenv('DB_USERNAME');
+        $this->password = getenv('DB_PASSWORD');
+        $this->database = getenv('DB_DATABASE');
+        $this->port = getenv('DB_PORT');
     }
 
     public static function getInstance()

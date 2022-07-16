@@ -10,14 +10,16 @@ use App\domain\repository\GenericRepository;
 $driver = new \mysqli_driver();
 $driver->report_mode = \MYSQLI_REPORT_ERROR | \MYSQLI_REPORT_STRICT;
 
-class SupplierRepository extends GenericRepository {
+class SupplierRepository extends GenericRepository
+{
 
-    //put your code here
-    public function __construct() {
+    public function __construct()
+    {
         parent::__construct();
     }
 
-    public function create($object) {
+    public function create($object)
+    {
 
         $connection = $this->connect();
         $connection->autocommit(false);
@@ -36,35 +38,50 @@ class SupplierRepository extends GenericRepository {
                    (name, vatNumber)
                     VALUES (?,?)";
 
-            $statement = $this->executeStatement($query, array(
-                $name,
-                $vatNumber
-                    )
+            $statement = $this->executeStatement(
+                $query,
+                array($name, $vatNumber)
             );
 
             $connection->commit();
 
             if ($statement->insert_id > 0) {
-                $supplier = $this->
-                                select("SELECT * FROM supplier WHERE id = ?", array(
-                                    $statement->insert_id))->fetch_assoc();
+                $supplier = $this->select(
+                    "SELECT * FROM supplier WHERE id = ?",
+                    array($statement->insert_id)
+                )->fetch_assoc();
             }
-        } catch (\mysqli_sql_exception $ex) {
+        }
+        catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
-        } finally {
+        }
+        finally {
             $statement->close();
         }
 
         return $supplier;
     }
 
-    public function findAll() {
+    public function findAll(int $page, int $limit, array $sorts)
+    {
 
         try {
-            $query = "SELECT * FROM supplier";
 
-            $result = $this->select($query);
+            $offset = ($limit * $page) - $limit;
+
+            $query = "SELECT 
+                            * 
+                        FROM 
+                            supplier 
+                        ORDER BY 
+                            {$this->getOrderByString($sorts)} 
+                        LIMIT ?,?";
+
+            $result = $this->select(
+                $query,
+                array($offset, $limit)
+            );
 
             if ($result->num_rows === 0) {
                 $suppliers = null;
@@ -75,14 +92,16 @@ class SupplierRepository extends GenericRepository {
             while ($supplier = $result->fetch_assoc()) {
                 array_push($suppliers, $supplier);
             }
-        } catch (\mysqli_sql_exception $ex) {
+        }
+        catch (\mysqli_sql_exception $ex) {
             throw new MYSQLTransactionException($ex->getMessage());
         }
 
         return $suppliers;
     }
 
-    public function findOne($id) {
+    public function findOne($id)
+    {
         try {
 
             $query = "SELECT * FROM supplier WHERE id = ?";
@@ -94,52 +113,51 @@ class SupplierRepository extends GenericRepository {
             }
 
             $supplier = $result->fetch_assoc();
-        } catch (\mysqli_sql_exception $ex) {
+        }
+        catch (\mysqli_sql_exception $ex) {
             throw new MYSQLTransactionException($ex->getMessage());
         }
 
         return $supplier;
     }
 
-    public function findByName($name) {
+    public function findByParams(array $options, int $page, int $limit, array $sorts)
+    {
         try {
 
-            $query = "SELECT * FROM supplier WHERE name = ?";
+            $offset = ($limit * $page) - $limit;
 
-            $result = $this->select($query, array($name));
+            $query = "SELECT 
+                            * 
+                        FROM 
+                            supplier 
+                        WHERE 
+                            {$this->whereClauseBuilder($options)}
+                        ORDER BY
+                            {$this->getOrderByString($sorts)}
+                        LIMIT ?, ?";
+
+            $result = $this->select($query, array($offset, $limit));
 
             if ($result->num_rows === 0) {
-                $supplier = null;
+                $suppliers = null;
             }
 
-            $supplier = $result->fetch_assoc();
-        } catch (\mysqli_sql_exception $ex) {
+            $suppliers = array();
+
+            while ($supplier = $result->fetch_assoc()) {
+                array_push($suppliers, $supplier);
+            }
+
+        }
+        catch (\mysqli_sql_exception $ex) {
             throw new MYSQLTransactionException($ex->getMessage());
         }
 
-        return $supplier;
+        return $suppliers;
     }
-
-    public function findByVatNumber($vatNumber) {
-        try {
-
-            $query = "SELECT * FROM supplier WHERE vatNumber = ?";
-
-            $result = $this->select($query, array($vatNumber));
-
-            if ($result->num_rows === 0) {
-                $supplier = null;
-            }
-
-            $supplier = $result->fetch_assoc();
-        } catch (\mysqli_sql_exception $ex) {
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-
-        return $supplier;
-    }
-
-    public function update($object) {
+    public function update($object)
+    {
 
         $connection = $this->connect();
         $connection->autocommit(false);
@@ -162,11 +180,10 @@ class SupplierRepository extends GenericRepository {
                       WHERE 
                         id = ?";
 
-            $statement = $this->
-                    executeStatement($query, array(
-                $name,
-                $vatNumber,
-                $id));
+            $statement = $this->executeStatement(
+                $query,
+                array($name, $vatNumber, $id)
+            );
 
 
             $connection->commit();
@@ -176,7 +193,8 @@ class SupplierRepository extends GenericRepository {
             }
 
             $supplier = $this->findOne($id);
-        } catch (\mysqli_sql_exception $ex) {
+        }
+        catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }
@@ -184,7 +202,8 @@ class SupplierRepository extends GenericRepository {
         return $supplier;
     }
 
-    public function delete($id) {
+    public function delete($id)
+    {
 
         $connection = $this->connect();
         $connection->autocommit(false);
@@ -200,10 +219,16 @@ class SupplierRepository extends GenericRepository {
             }
 
             return true;
-        } catch (\mysqli_sql_exception $ex) {
+        }
+        catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }
+    }
+
+    public function getTotal(): int
+    {
+        return $this->getTotalQuantity("supplier");
     }
 
 }

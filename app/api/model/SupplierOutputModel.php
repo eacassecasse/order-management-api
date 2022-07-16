@@ -9,6 +9,8 @@ use Hateoas\Configuration\Annotation as Hateoas;
  * @Serializer\XmlRoot("supplier")
  * 
  * @Hateoas\Relation("self", href="expr('/v1/endpoints/suppliers/' ~object.getId())")
+ * 
+ * @Hateoas\Relation("products", href="expr('/v1/endpoints/suppliers/' ~object.getId() ~'/products')")
  */
 class SupplierOutputModel implements \JsonSerializable
 {

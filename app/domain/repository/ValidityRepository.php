@@ -5,7 +5,6 @@ namespace app\domain\repository;
 use App\core\shared\Utilities;
 use App\domain\exception\BusinessException;
 use App\domain\exception\MYSQLTransactionException;
-use App\domain\model\Product;
 use App\domain\model\Validity;
 use App\domain\repository\GenericRepository;
 
@@ -44,14 +43,30 @@ class ValidityRepository extends GenericRepository
             $statement = $this->executeStatement($query, array(
                 $productId,
                 $expirationDate,
-                $quantity));
+                $quantity
+            ));
 
             $connection->commit();
 
             if ($statement->insert_id > 0) {
-                $validity = $this->
-                    select("SELECT * FROM validities WHERE id = ? and product_id = ?", array(
-                    $statement->insert_id, $productId))->fetch_assoc();
+                $validity = $this->select("SELECT 
+                    product0_.id AS product_id, product0_.description, 
+                    product0_.measure_unit AS unit, product0_.total_quantity, 
+                    validities0_.id AS validity_id, validities0_.expiration_date, 
+                    validities0_.quantity 
+                FROM 
+                    product product0_ 
+                INNER JOIN 
+                    (validities validities0_) 
+                ON 
+                    (validities0_.id = ?
+                AND
+                    product0_.id = ?
+                AND
+                    product0_.id = validities0_.product_id)
+                ", array(
+                    $statement->insert_id, $productId
+                ))->fetch_assoc();
             }
         }
         catch (\mysqli_sql_exception $ex) {
@@ -64,13 +79,34 @@ class ValidityRepository extends GenericRepository
         return $validity;
     }
 
-    public function findAll()
+    public function findAll(int $productId, int $page, int $limit, array $sorts)
     {
 
         try {
-            $query = "SELECT * FROM validities";
 
-            $result = $this->select($query);
+            $offset = ($limit * $page) - $limit;
+
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.total_quantity, 
+                            validities0_.id AS validity_id, validities0_.expiration_date, 
+                            validities0_.quantity 
+                        FROM 
+                            product product0_ 
+                        INNER JOIN 
+                            (validities validities0_) 
+                        ON 
+                            (product0_.id = ? 
+                        AND
+                            product0_.id = validities0_.product_id)
+                        ORDER BY {$this->getOrderByString($sorts)}
+                        LIMIT ?,?";
+
+            $result = $this->select(
+                $query,
+                array($productId, $offset, $limit)
+            );
+
 
             if ($result->num_rows === 0) {
                 $validities = null;
@@ -89,13 +125,27 @@ class ValidityRepository extends GenericRepository
         return $validities;
     }
 
-    public function findOne($id, $productId)
+    public function findOne($productId, $validityId)
     {
         try {
 
-            $query = "SELECT * FROM validities WHERE id = ? and product_id = ?";
+            $query = "SELECT 
+            product0_.id AS product_id, product0_.description, 
+            product0_.measure_unit AS unit, product0_.total_quantity, 
+            validities0_.id AS validity_id, validities0_.expiration_date, 
+            validities0_.quantity 
+        FROM 
+            product product0_ 
+        INNER JOIN 
+            (validities validities0_) 
+        ON 
+            (product0_.id = ?
+        AND
+            validities0_.id = ?
+        AND
+            product0_.id = validities0_.product_id)";
 
-            $result = $this->select($query, array($id, $productId));
+            $result = $this->select($query, array($productId, $validityId));
 
             if ($result->num_rows === 0) {
                 $validity = null;
@@ -110,16 +160,35 @@ class ValidityRepository extends GenericRepository
         return $validity;
     }
 
-    public function findByExpirationDate(\Datetime $expirationDate)
+    public function findByParams(int $productId, array $options, int $page, int $limit, array $sorts)
     {
-
-        $datetime = Utilities::toDatabaseDatetime($expirationDate);
 
         try {
 
-            $query = "SELECT * FROM validities WHERE expiration_date = ?";
+            $offset = ($limit * $page) - $limit;
 
-            $result = $this->select($query, array($datetime));
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.total_quantity, 
+                            validities0_.id AS validity_id, validities0_.expiration_date, 
+                            validities0_.quantity 
+                        FROM 
+                            product product0_ 
+                        INNER JOIN 
+                            (validities validities0_) 
+                        ON 
+                            (product0_.id = ?
+                        AND
+                            {$this->whereClauseBuilder($options)}
+                        AND
+                            product0_.id = validities0_.product_id)
+                        ORDER BY {$this->getOrderByString($sorts)}
+                        LIMIT ?,?";
+
+            $result = $this->select(
+                $query,
+                array($productId, $offset, $limit)
+            );
 
             if ($result->num_rows === 0) {
                 $validities = null;
@@ -137,35 +206,6 @@ class ValidityRepository extends GenericRepository
 
         return $validities;
     }
-
-    public function findByProduct(Product $product)
-    {
-
-        $productId = $product->getId();
-
-        try {
-
-            $query = "SELECT * FROM validities WHERE product_id = ?";
-
-            $result = $this->select($query, array($productId));
-
-            if ($result->num_rows === 0) {
-                $validities = null;
-            }
-
-            $validities = array();
-
-            while ($validity = $result->fetch_assoc()) {
-                array_push($validities, $validity);
-            }
-        }
-        catch (\mysqli_sql_exception $ex) {
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-
-        return $validities;
-    }
-
     public function update($object)
     {
 
@@ -177,7 +217,7 @@ class ValidityRepository extends GenericRepository
             throw new BusinessException("Unknown Entity Found");
         }
 
-        $id = $object->getId();
+        $validity_id = $object->getId();
         $expirationDate = Utilities::toDatabaseDatetime($object->getExpirationDate());
         $productId = $object->getProduct()->getId();
         $quantity = $object->getQuantity();
@@ -191,12 +231,12 @@ class ValidityRepository extends GenericRepository
                       WHERE 
                         id = ? and product_id = ?";
 
-            $statement = $this->
-                executeStatement($query, array(
+            $statement = $this->executeStatement($query, array(
                 $expirationDate,
                 $quantity,
-                $id,
-                $productId));
+                $validity_id,
+                $productId
+            ));
 
 
             $connection->commit();
@@ -205,7 +245,7 @@ class ValidityRepository extends GenericRepository
                 $validity = null;
             }
 
-            $validity = $this->findOne($id, $productId);
+            $validity = $this->findOne($validity_id, $productId);
         }
         catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
@@ -215,7 +255,7 @@ class ValidityRepository extends GenericRepository
         return $validity;
     }
 
-    public function delete($id, $productId)
+    public function delete($validityId)
     {
 
         $connection = $this->connect();
@@ -223,9 +263,9 @@ class ValidityRepository extends GenericRepository
         $connection->begin_transaction();
 
         try {
-            $query = "DELETE FROM validities WHERE id = ? and product_id = ?";
+            $query = "DELETE FROM validities WHERE id = ?";
 
-            $statement = $this->executeStatement($query, array($id, $productId));
+            $statement = $this->executeStatement($query, array($validityId));
 
             if ($statement->affected_rows === 0) {
                 return false;
@@ -237,6 +277,11 @@ class ValidityRepository extends GenericRepository
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }
+    }
+
+    public function getTotal(int $id): int
+    {
+        return $this->getTotalQuantity("validities", 'product', $id);
     }
 
 }

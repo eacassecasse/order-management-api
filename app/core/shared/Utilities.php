@@ -376,7 +376,7 @@ class Utilities
         if ($record) {
             $validity = new Validity();
 
-            $validity->setId($record['id']);
+            $validity->setId($record['validity_id']);
             $validity->setQuantity($record['quantity']);
 
             $validity->setExpirationDate(
@@ -386,6 +386,9 @@ class Utilities
             $product = new Product();
 
             $product->setId($record['product_id']);
+            $product->setDescription($record['description']);
+            $product->setUnit($record['unit']);
+            $product->setTotalQuantity((float)$record['total_quantity']);
 
             $validity->setProduct($product);
         }
@@ -419,9 +422,15 @@ class Utilities
 
             $product = new Product();
             $product->setId($record['product_id']);
+            $product->setDescription($record['description']);
+            $product->setUnit($record['unit']);
+            $product->setTotalQuantity((float)$record['total_quantity']);
+            $product->setLowestPrice((float)$record['lowest_price']);
 
             $storage = new Storage();
             $storage->setId($record['storage_id']);
+            $storage->setDesignation($record['designation']);
+            $storage->setCode($record['code']);
 
             $storedProduct->setProduct($product);
             $storedProduct->setStorage($storage);
@@ -457,9 +466,15 @@ class Utilities
 
             $product = new Product();
             $product->setId($record['product_id']);
+            $product->setDescription($record['description']);
+            $product->setUnit($record['unit']);
+            $product->setLowestPrice((float)$record['lowest_price']);
+            $product->setTotalQuantity((float)$record['total_quantity']);
 
             $supplier = new Supplier();
             $supplier->setId($record['supplier_id']);
+            $supplier->setName($record['name']);
+            $supplier->setVatNumber($record['vatNumber']);
 
             $supplierProduct->setProduct($product);
             $supplierProduct->setSupplier($supplier);
@@ -505,7 +520,6 @@ class Utilities
 
     public static function toUserCollection($records)
     {
-
         $users = null;
 
         if ($records) {
@@ -529,7 +543,7 @@ class Utilities
     public static function toPHPDatetime(?string $mysqlDatetime)
     {
 
-        $phpDatetime = \DateTime::createFromFormat('Y-m-d H:i:s', $mysqlDatetime);
+        $phpDatetime = new \DateTime($mysqlDatetime);
 
         return $phpDatetime;
     }
@@ -542,4 +556,25 @@ class Utilities
         return $date;
     }
 
+    public static function isDate($param)    {
+        return self::isDateFormat($param, 'Y-m-d') ||
+        self::isDateFormat($param, 'Y-m-d\TH:i') ||
+        self::isDateFormat($param, 'Y-m-d\TH:i') ||
+        self::isDateFormat($param, 'Y-m-d\TH:i:s') ||
+        self::isDateFormat($param, 'y-m-d') ||
+        self::isDateFormat($param, 'y-m-d\TH:i') ||
+        self::isDateFormat($param, 'y-m-d\TH:i:s');    
+    }    
+            
+    private static function isDateFormat($stringDate, $format)    {
+        try {
+            $datetime = new \DateTime($stringDate);
+
+            return $datetime && $datetime->format($format) === $stringDate;
+
+        }
+        catch (\Exception $exception) {
+            return false;
+        }    
+    }
 }

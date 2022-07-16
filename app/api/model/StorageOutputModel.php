@@ -9,6 +9,8 @@ use Hateoas\Configuration\Annotation as Hateoas;
  * @Serializer\XmlRoot("storage")
  * 
  * @Hateoas\Relation("self", href = "expr('/v1/endpoints/storages/' ~object.getId())")
+ * 
+ * @Hateoas\Relation("products", href = "expr('/v1/endpoints/storages/' ~object.getId() ~'/products')")
  */
 class StorageOutputModel implements \JsonSerializable
 {

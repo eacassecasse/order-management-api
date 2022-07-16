@@ -13,7 +13,6 @@ $driver->report_mode = \MYSQLI_REPORT_ERROR | \MYSQLI_REPORT_STRICT;
 class StoredProductRepository extends GenericRepository
 {
 
-    //put your code here
     public function __construct()
     {
         parent::__construct();
@@ -40,21 +39,32 @@ class StoredProductRepository extends GenericRepository
                    (product_id, storage_id, quantity)
                     VALUES (?,?,?)";
 
-            $statement = $this->executeStatement($query, array(
-                $productId,
-                $storageId,
-                $quantity));
+            $statement = $this->executeStatement(
+                $query,
+                array($productId, $storageId, $quantity)
+            );
 
             $connection->commit();
 
-            $storedProduct = $this->
-                select("SELECT * FROM 
-                                        stored_products 
-                                        WHERE 
-                                        product_id = ? 
-                                        AND 
-                                        storage_id = ?", array(
-                $productId, $storageId))->fetch_assoc();
+            $storedProduct = $this->select(
+                "SELECT 
+                product0_.id AS product_id, product0_.description, product0_.measure_unit AS unit, 
+                product0_.lowest_price, stored_products0_.quantity, storage0_.id AS storage_id, 
+                storage0_.designation, storage0_.code, product0_.total_quantity
+            FROM
+                product product0_
+            INNER JOIN 
+                (storage storage0_ INNER JOIN stored_products stored_products0_)
+            ON
+                (product0_.id = stored_products0_.product_id 
+            AND 
+                storage0_.id = stored_products0_.storage_id
+            AND
+                stored_products0_.product_id = ?
+            AND 
+                stored_products0_.storage_id = ?)",
+                array($productId, $storageId)
+            )->fetch_assoc();
         }
         catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
@@ -67,13 +77,36 @@ class StoredProductRepository extends GenericRepository
         return $storedProduct;
     }
 
-    public function findAll()
+    public function findAll(int $storageId, int $page, int $limit, array $sorts)
     {
 
         try {
-            $query = "SELECT * FROM stored_products";
 
-            $result = $this->select($query);
+            $offset = ($limit * $page) - $limit;
+
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.lowest_price,
+                            stored_products0_.quantity, storage0_.id AS storage_id, 
+                            storage0_.designation, storage0_.code, product0_.total_quantity
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (storage storage0_ INNER JOIN stored_products stored_products0_)
+                        ON
+                            (storage0_.id = ?
+                        AND
+                            product0_.id = stored_products0_.product_id 
+                        AND 
+                            storage0_.id = stored_products0_.storage_id)
+                        ORDER BY {$this->getOrderByString($sorts)}
+                        LIMIT ?, ?";
+
+
+            $result = $this->select(
+                $query,
+                array($storageId, $offset, $limit)
+            );
 
             if ($result->num_rows === 0) {
                 $storedProducts = null;
@@ -92,16 +125,27 @@ class StoredProductRepository extends GenericRepository
         return $storedProducts;
     }
 
-    public function findOne($productId, $storageId)
+    public function findOne($storageId, $productId)
     {
         try {
 
-            $query = "SELECT * FROM 
-                      stored_products 
-                      WHERE 
-                      product_id = ? 
-                      AND 
-                      storage_id = ?";
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.lowest_price,
+                            stored_products0_.quantity, storage0_.id AS storage_id, 
+                            storage0_.designation, storage0_.code, product0_.total_quantity
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (storage storage0_ INNER JOIN stored_products stored_products0_)
+                        ON
+                            (product0_.id = stored_products0_.product_id 
+                        AND 
+                            storage0_.id = stored_products0_.storage_id
+                        AND
+                            stored_products0_.product_id = ?
+                        AND 
+                            stored_products0_.storage_id = ?)";
 
             $result = $this->select($query, array($productId, $storageId));
 
@@ -118,19 +162,36 @@ class StoredProductRepository extends GenericRepository
         return $storedProduct;
     }
 
-    public function findByProduct(StoredProduct $stored)
+    public function findByProduct(int $productId, int $page, int $limit, array $sorts)
     {
-
-        $productId = $stored->getProduct()->getId();
 
         try {
 
-            $query = "SELECT * FROM 
-                      stored_products 
-                      WHERE 
-                      product_id = ?";
+            $offset = ($limit * $page) - $limit;
 
-            $result = $this->select($query, array($productId));
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.lowest_price,
+                            stored_products0_.quantity, storage0_.id AS storage_id, 
+                            storage0_.designation, storage0_.code, product0_.total_quantity
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (storage storage0_ INNER JOIN stored_products stored_products0_)
+                        ON
+                            (product0_.id = stored_products0_.product_id 
+                        AND 
+                            storage0_.id = stored_products0_.storage_id
+                        AND
+                            product0_.id = ?)
+                        ORDER BY {$this->getOrderByString($sorts)}
+                        LIMIT ?, ?";
+
+            $result = $this->select(
+                $query,
+                array($productId, $offset, $limit)
+            );
+
 
             if ($result->num_rows === 0) {
                 $storedProducts = null;
@@ -149,19 +210,39 @@ class StoredProductRepository extends GenericRepository
         return $storedProducts;
     }
 
-    public function findByStorage(StoredProduct $stored)
-    {
 
-        $storageId = $stored->getStorage()->getId();
+    public function findByParams(int $storageId, array $options, int $page, int $limit, array $sorts)
+    {
 
         try {
 
-            $query = "SELECT * FROM 
-                      stored_products 
-                      WHERE 
-                      storage_id = ?";
+            $offset = ($limit * $page) - $limit;
 
-            $result = $this->select($query, array($storageId));
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.lowest_price,
+                            stored_products0_.quantity, storage0_.id AS storage_id, 
+                            storage0_.designation, storage0_.code, product0_.total_quantity
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (storage storage0_ INNER JOIN stored_products stored_products0_)
+                        ON
+                            (product0_.id = stored_products0_.product_id 
+                        AND 
+                            storage0_.id = stored_products0_.storage_id
+                        AND
+                            storage0_.id = ?
+                        AND
+                            {$this->whereClauseBuilder($options)})
+                        ORDER BY {$this->getOrderByString($sorts)}
+                        LIMIT ?, ?";
+
+            $result = $this->select(
+                $query,
+                array($storageId, $offset, $limit)
+            );
+
 
             if ($result->num_rows === 0) {
                 $storedProducts = null;
@@ -205,11 +286,10 @@ class StoredProductRepository extends GenericRepository
                       AND
                         storage_id = ?";
 
-            $statement = $this->
-                executeStatement($query, array(
-                $quantity,
-                $productId,
-                $storageId));
+            $statement = $this->executeStatement(
+                $query,
+                array($quantity, $productId, $storageId)
+            );
 
 
             $connection->commit();
@@ -218,7 +298,7 @@ class StoredProductRepository extends GenericRepository
                 $storedProduct = null;
             }
 
-            $storedProduct = $this->findOne($productId, $storageId);
+            $storedProduct = $this->findOne($storageId, $productId);
         }
         catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
@@ -276,7 +356,7 @@ class StoredProductRepository extends GenericRepository
         }
     }
 
-    public function deleteOne($productId, $storageId)
+    public function deleteOne($storageId, $productId)
     {
 
         $connection = $this->connect();
@@ -290,7 +370,10 @@ class StoredProductRepository extends GenericRepository
                       AND 
                       storage_id = ?";
 
-            $statement = $this->executeStatement($query, array($productId, $storageId));
+            $statement = $this->executeStatement(
+                $query,
+                array($productId, $storageId)
+            );
 
             if ($statement->affected_rows === 0) {
                 return false;
@@ -302,6 +385,16 @@ class StoredProductRepository extends GenericRepository
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }
+    }
+
+    public function getTotal(int $id): int
+    {
+        return $this->getTotalQuantity("stored_products", "storage", $id);
+    }
+
+    public function getTotalByProduct(int $id): int
+    {
+        return $this->getTotalQuantity("stored_products", "product", $id);
     }
 
 }

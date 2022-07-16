@@ -40,18 +40,18 @@ class ProductRepository extends GenericRepository
                    (description, measure_unit, lowest_price, total_quantity)
                     VALUES (?,?,?,?)";
 
-            $statement = $this->executeStatement($query, array(
-                $description,
-                $unit,
-                $lowestPrice,
-                $totalQuantity));
+            $statement = $this->executeStatement(
+                $query,
+                array($description, $unit, $lowestPrice, $totalQuantity)
+            );
 
             $connection->commit();
 
             if ($statement->insert_id > 0) {
-                $product = $this->
-                    select("SELECT * FROM product WHERE id = ?", array(
-                    $statement->insert_id))->fetch_assoc();
+                $product = $this->select(
+                    "SELECT * FROM product WHERE id = ?",
+                    array($statement->insert_id)
+                )->fetch_assoc();
             }
         }
         catch (\mysqli_sql_exception $ex) {
@@ -65,13 +65,25 @@ class ProductRepository extends GenericRepository
         return $product;
     }
 
-    public function findAll()
+    public function findAll(int $page, int $limit, array $sorts)
     {
 
         try {
-            $query = "SELECT * FROM product";
 
-            $result = $this->select($query);
+            $offset = ($limit * $page) - $limit;
+
+            $query = "SELECT 
+                            * 
+                        FROM 
+                            product 
+                        ORDER BY 
+                            {$this->getOrderByString($sorts)} 
+                        LIMIT ?,?";
+
+            $result = $this->select(
+                $query,
+                array($offset, $limit)
+            );
 
             if ($result->num_rows === 0) {
                 $products = null;
@@ -82,6 +94,7 @@ class ProductRepository extends GenericRepository
             while ($product = $result->fetch_assoc()) {
                 array_push($products, $product);
             }
+
         }
         catch (\mysqli_sql_exception $ex) {
             throw new MYSQLTransactionException($ex->getMessage());
@@ -111,34 +124,23 @@ class ProductRepository extends GenericRepository
         return $product;
     }
 
-    public function findByDescription($description)
+    public function findByParams(array $options, int $page, int $limit, array $sorts)
     {
         try {
 
-            $query = "SELECT * FROM product WHERE description = ?";
+            $offset = ($limit * $page) - $limit;
 
-            $result = $this->select($query, array($description));
+            $query = "SELECT 
+                            * 
+                        FROM 
+                            product 
+                        WHERE 
+                            {$this->whereClauseBuilder($options)} 
+                        ORDER BY 
+                            {$this->getOrderByString($sorts)} 
+                        LIMIT ?, ?";
 
-            if ($result->num_rows === 0) {
-                $product = null;
-            }
-
-            $product = $result->fetch_assoc();
-        }
-        catch (\mysqli_sql_exception $ex) {
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-
-        return $product;
-    }
-
-    public function findByUnit($unit)
-    {
-        try {
-
-            $query = "SELECT * FROM product WHERE measure_unit = ?";
-
-            $result = $this->select($query, array($unit));
+            $result = $this->select($query, array($offset, $limit));
 
             if ($result->num_rows === 0) {
                 $products = null;
@@ -156,6 +158,7 @@ class ProductRepository extends GenericRepository
 
         return $products;
     }
+
     public function update($object)
     {
 
@@ -184,13 +187,10 @@ class ProductRepository extends GenericRepository
                       WHERE 
                         id = ?";
 
-            $statement = $this->
-                executeStatement($query, array(
-                $description,
-                $unit,
-                $lowestPrice,
-                $totalQuantity,
-                $id));
+            $statement = $this->executeStatement(
+                $query,
+                array($description, $unit, $lowestPrice, $totalQuantity, $id)
+            );
 
 
             $connection->commit();
@@ -233,4 +233,8 @@ class ProductRepository extends GenericRepository
         }
     }
 
+    public function getTotal(): int
+    {
+        return $this->getTotalQuantity("product");
+    }
 }

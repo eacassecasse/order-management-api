@@ -47,13 +47,16 @@ class StorageService
         $storage->setDesignation($inputModel->getDesignation());
         $storage->setCode($this->createCode($storage));
 
-        $found = Utilities::toStorage(
-            $this->repository->findByCode($storage->getCode()));
-
-        if (($found) && ($found->__equals($storage))) {
-            throw new BusinessException('Storage already exists');
+        $options = array('code' => $storage->getCode());
+        $founds = Utilities::toStorageCollection(
+            $this->repository->findByParams($options, 1, 5000, array(["id", "asc"])));
+        if ($founds) {
+            foreach ($founds as $found) {
+                if (($found) && ($found->__equals($storage))) {
+                    throw new BusinessException('Storage already exists');
+                }
+            }
         }
-
         return Utilities::toStorage($this->repository->create($storage));
     }
 
@@ -69,11 +72,11 @@ class StorageService
         return $storage;
     }
 
-    public function findByDesignation(?string $designation): ?array
+    public function findByDesignation(array $options, int $page, int $limit, array $sorts): ?array
     {
 
         $storages = Utilities::toStorageCollection(
-            $this->repository->findByDesignation($designation));
+            $this->repository->findByParams($options, $page, $limit, $sorts));
 
         if (!($storages)) {
             throw new EntityNotFoundException('Could not find any Storage');
@@ -82,22 +85,43 @@ class StorageService
         return $storages;
     }
 
-    public function findByCode(?string $code): ?Storage
+    public function findByCode(array $options, int $page, int $limit, array $sorts): ?array
     {
 
-        $storage = Utilities::toStorage($this->repository->findByCode($code));
+        $storages = Utilities::toStorageCollection(
+            $this->repository->findByParams($options, $page, $limit, $sorts));
 
-        if (!($storage)) {
+        if (!($storages)) {
             throw new EntityNotFoundException('Storage Not Found');
         }
 
-        return $storage;
+        return $storages;
     }
 
-    public function findAll(): ?array
+    public function findByDesignationAndCode(
+        array $options,
+        int $page,
+        int $limit,
+        array $sorts): ?array
     {
 
-        $storages = Utilities::toStorageCollection($this->repository->findAll());
+        $storages = Utilities::toStorageCollection(
+            $this->repository->findByParams($options, $page, $limit, $sorts));
+
+        if (!($storages)) {
+            throw new EntityNotFoundException('Storage Not Found');
+        }
+
+        return $storages;
+    }
+
+    public function findAll(
+        int $page,
+        int $limit,
+        array $sorts): ?array
+    {
+
+        $storages = Utilities::toStorageCollection($this->repository->findAll($page, $limit, $sorts));
 
         if (!($storages)) {
             throw new EntityNotFoundException('Could not find any Storage');
@@ -115,7 +139,7 @@ class StorageService
             $found->setDesignation($inputModel->getDesignation());
             $found->setCode($this->createCode($found));
         }
-        
+
         $updatedStorage = Utilities::toStorage(
             $this->repository->update($found));
 
@@ -132,6 +156,11 @@ class StorageService
         $storage = $this->findOne($id);
 
         return $this->repository->delete($storage->getId());
+    }
+
+    public function getStoragesExistance()
+    {
+        return $this->repository->getTotal();
     }
 
     public function add(?StoredProductInputModel $inputModel): ?StoredProduct
@@ -168,7 +197,7 @@ class StorageService
             $this->storedProductRepository->create($storedProduct));
     }
 
-    public function findOneProduct(?int $productId, ?int $storageId): ?StoredProduct
+    public function viewProduct(?int $productId, ?int $storageId): ?StoredProduct
     {
 
         $storedProduct = Utilities::toStoredProduct(
@@ -179,25 +208,43 @@ class StorageService
             throw new EntityNotFoundException('Product not found on Storage');
         }
 
-        $product = $this->findProduct($storedProduct->getProduct()->getId());
-        $storage = $this->findOne($storedProduct->getStorage()->getId());
-
-        $storedProduct->setProduct($product);
-        $storedProduct->setStorage($storage);
-
         return $storedProduct;
     }
 
-    public function listAll(?int $storageId): ?array
+    public function listAll(
+        int $storageId,
+        int $page,
+        int $limit,
+        array $sorts): ?array
     {
 
         $storage = $this->findOne($storageId);
 
-        $storedProduct = new StoredProduct();
-        $storedProduct->setStorage($storage);
+        $storedProducts = Utilities::toStoredProductCollection(
+            $this->storedProductRepository->findAll($storage->getId(), $page, $limit, $sorts)
+        );
+
+        if (!($storedProducts)) {
+            throw new EntityNotFoundException('Could not find any product on '
+                . 'this Storage');
+        }
+
+        return $storedProducts;
+    }
+
+    public function listByQuantity(
+        int $storageId,
+        array $options,
+        int $page,
+        int $limit,
+        array $sorts): ?array
+    {
+
+        $storage = $this->findOne($storageId);
 
         $storedProducts = Utilities::toStoredProductCollection(
-            $this->storedProductRepository->findByStorage($storedProduct)
+            $this->storedProductRepository->findByParams(
+            $storage->getId(), $options, $page, $limit, $sorts)
         );
 
         if (!($storedProducts)) {
@@ -211,31 +258,25 @@ class StorageService
     public function edit(?StoredProductInputModel $inputModel): ?StoredProduct
     {
 
-        $prod = new Product();
-        $prod->setId($inputModel->getProduct()->getId());
+        $product = $this->findProduct($inputModel->getProduct()->getId());
 
-        $stor = new Storage();
-        $stor->setId($inputModel->getStorage()->getId());
+        $storage = $this->findOne($inputModel->getStorage()->getId());
 
         $storedProduct = new StoredProduct();
         $storedProduct->setQuantity($inputModel->getQuantity());
-        $storedProduct->setProduct($prod);
-        $storedProduct->setStorage($stor);
+        $storedProduct->setProduct($product);
+        $storedProduct->setStorage($storage);
 
 
         $found = Utilities::toStoredProduct(
             $this->storedProductRepository->findOne(
-            $storedProduct->getProduct()->getId(), $storedProduct->
-            getStorage()->getId()
+            $storage->getId(), $product->getId()
         )
         );
 
         if (!($found)) {
-            throw new EntityNotFoundException('Product Not Found on the Storage');
+            throw new EntityNotFoundException('This product is not stored in given store.');
         }
-
-        $product = $this->findProduct($storedProduct->getProduct()->getId());
-        $storage = $this->findOne($storedProduct->getStorage()->getId());
 
         $found->setProduct($product);
         $found->setStorage($storage);
@@ -246,29 +287,26 @@ class StorageService
         );
     }
 
-    public function remove(?StoredProductInputModel $inputModel): ?bool
+    public function remove(int $storageId, int $productId): ?bool
     {
 
-        $prod = new Product();
-        $prod->setId($inputModel->getProduct()->getId());
-
-        $stor = new Storage();
-        $stor->setId($inputModel->getStorage()->getId());
-
-        $storedProduct = new StoredProduct();
-        $storedProduct->setQuantity($inputModel->getQuantity());
-        $storedProduct->setProduct($prod);
-        $storedProduct->setStorage($stor);
+        $this->findOne($storageId);
+        $this->findProduct($productId);
 
         $found = Utilities::toStoredProduct(
-            $this->storedProductRepository->findOne(
-            $storedProduct->getProduct()->
-            getId(), $storedProduct->getStorage()->getId()
-        )
+            $this->storedProductRepository->findOne($storageId, $productId)
         );
 
-        return $this->storedProductRepository->deleteOne(
-            $found->getProduct()->getId(), $found->getStorage()->getId());
+        if (!$found) {
+            throw new EntityNotFoundException("This product is not stored in the given store");
+        }
+
+        return $this->storedProductRepository->deleteOne($storageId, $productId);
+    }
+
+    public function getStoredProductsExistance(int $id)
+    {
+        return $this->storedProductRepository->getTotal($id);
     }
 
     private function findProduct(?int $id): ?Product
@@ -285,8 +323,10 @@ class StorageService
     private function createCode(?Storage $storage): ?string
     {
 
+        $options = array('designation' => $storage->getDesignation());
+
         $foundByDescription = Utilities::toStorageCollection(
-            $this->repository->findByDesignation($storage->getDesignation()
+            $this->repository->findByParams($options, 1, 100, array(["id", "asc"])
         )
         );
 

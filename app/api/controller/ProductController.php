@@ -23,8 +23,8 @@ use Hateoas\HateoasBuilder;
 use Hateoas\UrlGenerator\CallableUrlGenerator;
 use Pagerfanta\Adapter\ArrayAdapter;
 use Pagerfanta\Pagerfanta;
-use Hateoas\Representation\Factory\PagerfantaFactory;
-use Hateoas\Configuration\Route;
+use Hateoas\Representation\CollectionRepresentation;
+
 
 class ProductController extends BaseController
 {
@@ -47,7 +47,7 @@ class ProductController extends BaseController
     /**
      * @method void create()
      * 
-     * "/v1/endpoints/products/create" Endpoint 
+     * "POST /v1/endpoints/products" Endpoint 
      * 
      * Creates a new product
      */
@@ -55,55 +55,48 @@ class ProductController extends BaseController
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'POST') {
-            try {
+        try {
 
-                $data = json_decode(file_get_contents("php://input"));
+            $data = json_decode(file_get_contents("php://input"));
 
-                if (isset($data)) {
-                    $description = isset($data->description) ? $this->clean($data->description) : '';
-                    $unit = isset($data->unit) ? $this->clean($data->unit) : '';
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for description and unit [Not Null and Not Blank].');
-                }
-
-                if ((!$description && !$unit) ||
-                (substr($description, 0, 1) === ' ' && !$unit) ||
-                (!$description && substr($unit, 0, 1) === ' ') ||
-                (substr($description, 0, 1) === ' ' && substr($unit, 0, 1) === ' ')) {
-                    throw new BusinessException('Please provide valid values for description and unit [Not Null and Not Blank].');
-                }
-
-                if (!$description || substr($description, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide a valid value for description [Not Null and Not Blank].');
-                }
-                if (!$unit || substr($unit, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide valid value for unit [Not Null and Not Blank].');
-                }
-
-                $model = new ProductInputModel();
-                $model->setDescription($description);
-                $model->setUnit($unit);
-
-                $outputModel = $this->hateoas->serialize(
-                    Utilities::toProductOutputModel($this->service->create($model)), 'json');
-
+            if (isset($data)) {
+                $description = isset($data->description) ? $this->clean($data->description) : '';
+                $unit = isset($data->unit) ? $this->clean($data->unit) : '';
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTT/1.1 500 Internal Server Error';
+            else {
+                throw new BusinessException('Please provide valid values for description and unit [Not Null and Not Blank].');
             }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if ((!$description && !$unit) ||
+            (substr($description, 0, 1) === ' ' && !$unit) ||
+            (!$description && substr($unit, 0, 1) === ' ') ||
+            (substr($description, 0, 1) === ' ' && substr($unit, 0, 1) === ' ')) {
+                throw new BusinessException('Please provide valid values for description and unit [Not Null and Not Blank].');
             }
+
+            if (!$description || substr($description, 0, 1) === ' ') {
+                throw new BusinessException('Please provide a valid value for description [Not Null and Not Blank].');
+            }
+            if (!$unit || substr($unit, 0, 1) === ' ') {
+                throw new BusinessException('Please provide valid value for unit [Not Null and Not Blank].');
+            }
+
+            $model = new ProductInputModel();
+            $model->setDescription($description);
+            $model->setUnit($unit);
+
+            $outputModel = $this->hateoas->serialize(
+                Utilities::toProductOutputModel($this->service->create($model)), 'json');
+
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTT/1.1 500 Internal Server Error';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -121,91 +114,43 @@ class ProductController extends BaseController
     /**
      * @method void findOne($id)
      * 
-     * "/v1/endpoints/Products/{id}" Endpoint 
+     * "GET /v1/endpoints/products/{id}" Endpoint 
      * 
      * Get a product by a given ID
-     * 
-     * You can either get a product by its description 
-     * or unit passing one of this variable as a query parameters
      */
 
-    public function findOne($id = null)
+    public function findOne($id)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
 
-            try {
+        try {
 
-                $id = filter_var($this->clean($id), FILTER_VALIDATE_INT);
+            $id = filter_var($this->clean($id), FILTER_VALIDATE_INT);
 
-                if ($id) {
-                    $outputModel = $this->hateoas->serialize(
-                        Utilities::toProductOutputModel($this->service->findOne($id)), 'json');
-                }
-                else {
-                    $query = parse_url(filter_input(INPUT_SERVER, 'REQUEST_URI'), PHP_URL_QUERY);
-                    $toArrayQuery = parse_str($query, $arrayQuery);
-
-                    if (count($arrayQuery)) {
-                        if (isset($arrayQuery['description'])) {
-                            $description = filter_var($arrayQuery['description'], FILTER_SANITIZE_SPECIAL_CHARS);
-
-                            $outputModel = $this->hateoas->serialize(
-                                Utilities::toProductOutputModel(
-                                $this->service->findByDescription($description)), 'json');
-                        }
-                        else if (isset($arrayQuery['unit'])) {
-                            $options = array("flags" => FILTER_VALIDATE_INT);
-                            $unit = filter_var($arrayQuery['unit'], FILTER_SANITIZE_SPECIAL_CHARS, $options);
-
-                            $adapter = new ArrayAdapter(
-                                Utilities::toProductOutputCollectionModel($this->service->findByUnit($unit)));
-
-                            $pager = new Pagerfanta($adapter);
-
-                            if ($adapter->getNbResults() > 10) {
-                                $pager->setMaxPerPage(8);
-                            }
-                            else {
-
-                                $pager->setMaxPerPage(4);
-                            }
-
-                            $pagerFantaFactory = new PagerfantaFactory();
-
-                            $paginatedCollection = $pagerFantaFactory->createRepresentation(
-                                $pager, new Route('/v1/endpoints/products/', array("unit" => $unit)));
-
-                            $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
-                        }
-                    }
-                    else {
-                        throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0]');
-                    }
-                }
+            if ($id) {
+                $outputModel = $this->hateoas->serialize(
+                    Utilities::toProductOutputModel($this->service->findOne($id)), 'json');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransaction) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransaction);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+            else {
+                throw new BusinessException("Please provide valid values for ID [Not Blank|Not Empty|Integer|Greater than 0]!");
             }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransaction) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransaction);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -221,58 +166,56 @@ class ProductController extends BaseController
     }
 
     /**
-     * @method void find()
+     * @method void find($page, $limit, $sorts)
      * 
-     * "/v1/endpoints/products" Endpoint 
+     * "GET /v1/endpoints/products" Endpoint 
      * 
      * Get a list of products
      */
 
-    public function find()
+    public function find($page, $limit, $sorts)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
-            try {
+        try {
 
-                $adapter = new ArrayAdapter(
-                    Utilities::toProductOutputCollectionModel($this->service->findAll()));
+            $totalQuantity = $this->service->getProductExistance();
 
-                $pager = new Pagerfanta($adapter);
+            $adapter = new ArrayAdapter(
+                Utilities::toProductOutputCollectionModel($this->service->findAll($page, $limit, $sorts)));
 
-                if ($adapter->getNbResults() > 10) {
-                    $pager->setMaxPerPage(8);
-                }
-                else {
 
-                    $pager->setMaxPerPage(4);
-                }
+            $pager = new Pagerfanta($adapter);
 
-                $pagerFantaFactory = new PagerfantaFactory();
+            $paginatedCollection = new \Hateoas\Representation\PaginatedRepresentation(
+                new CollectionRepresentation($pager->getCurrentPageResults()),
+                '/v1/endpoints/products',
+                array(),
+                $page,
+                $limit,
+                ceil($totalQuantity / $limit),
+                'page',
+                'limit',
+                false,
+                $totalQuantity
+                );
 
-                $paginatedCollection = $pagerFantaFactory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/products/', array()));
+            $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
 
-                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
-            }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
         }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+
 
         //Send Output
         if (!($errorMessage)) {
@@ -289,7 +232,7 @@ class ProductController extends BaseController
     /**
      * @method void update($id)
      * 
-     * "/v1/endpoints/products/{id}/update" Endpoint 
+     * "PUT /v1/endpoints/products/{id}" Endpoint 
      * 
      * Updates a product with the given ID
      */
@@ -297,67 +240,60 @@ class ProductController extends BaseController
     public function update(int $id)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        try {
 
-        if (strtoupper($requestMethod) == 'PUT') {
-            try {
+            $data = json_decode(file_get_contents("php://input"));
 
-                $data = json_decode(file_get_contents("php://input"));
-
-                if ($id === 0) {
-                    throw new BusinessException('Please provided a valid value for id [Greater than 0 || Not Null]');
-                }
-
-                if (isset($data)) {
-                    $description = isset($data->description) ? $this->clean($data->description) : '';
-                    $unit = isset($data->unit) ? $this->clean($data->unit) : '';
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for description and unit [Not Null and Not Blank].');
-                }
-
-                if ((!$description && !$unit) ||
-                (substr($description, 0, 1) === ' ' && !$unit) ||
-                (!$description && substr($unit, 0, 1) === ' ') ||
-                (substr($description, 0, 1) === ' ' && substr($unit, 0, 1) === ' ')) {
-                    throw new BusinessException('Please provide valid values for description and unit [Not Null and Not Blank].');
-                }
-
-                if (!$description || substr($description, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide a valid value for description [Not Null and Not Blank].');
-                }
-                if (!$unit || substr($unit, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide valid value for unit [Not Null and Not Blank].');
-                }
-
-                $model = new ProductInputModel();
-                $model->setDescription($description);
-                $model->setUnit($unit);
-
-                $outputModel = $this->hateoas->serialize(Utilities::toProductOutputModel(
-                    $this->service->update($id, $model)), 'json');
+            if ($id === 0) {
+                throw new BusinessException('Please provided a valid value for id [Greater than 0 || Not Null]');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+
+            if (isset($data)) {
+                $description = isset($data->description) ? $this->clean($data->description) : '';
+                $unit = isset($data->unit) ? $this->clean($data->unit) : '';
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+            else {
+                throw new BusinessException('Please provide valid values for description and unit [Not Null and Not Blank].');
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
+
+            if ((!$description && !$unit) ||
+            (substr($description, 0, 1) === ' ' && !$unit) ||
+            (!$description && substr($unit, 0, 1) === ' ') ||
+            (substr($description, 0, 1) === ' ' && substr($unit, 0, 1) === ' ')) {
+                throw new BusinessException('Please provide valid values for description and unit [Not Null and Not Blank].');
             }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$description || substr($description, 0, 1) === ' ') {
+                throw new BusinessException('Please provide a valid value for description [Not Null and Not Blank].');
             }
+            if (!$unit || substr($unit, 0, 1) === ' ') {
+                throw new BusinessException('Please provide valid value for unit [Not Null and Not Blank].');
+            }
+
+            $model = new ProductInputModel();
+            $model->setDescription($description);
+            $model->setUnit($unit);
+
+            $outputModel = $this->hateoas->serialize(Utilities::toProductOutputModel(
+                $this->service->update($id, $model)), 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
         }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+
 
         //Send Output
         if (!($errorMessage)) {
@@ -374,7 +310,7 @@ class ProductController extends BaseController
     /**
      * @method void delete($id)
      * 
-     * "/v1/endpoints/products/{id}/delete" Endpoint 
+     * "DELETE /v1/endpoints/products/{id}/" Endpoint 
      * 
      * Delete a product with the given ID
      */
@@ -382,42 +318,34 @@ class ProductController extends BaseController
     public function delete($id)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'DELETE') {
+        try {
 
-            try {
+            $id = ($id) ? filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT)) : 0;
 
-                $id = ($id) ? filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT)) : 0;
-
-                if ($id === 0) {
-                    throw new BusinessException('Please provide a valid value for id [Greater than 0 and Not Null]');
-                }
-
-                if ($this->service->delete($id)) {
-                    $outputModel = '';
-                }
-                else {
-                    $errorMessage = 'Oops! Something went wrong';
-                    $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-                }
+            if ($id === 0) {
+                throw new BusinessException('Please provide a valid value for id [Greater than 0 and Not Null]');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+
+            if ($this->service->delete($id)) {
+                $outputModel = '';
+            }
+            else {
+                $errorMessage = 'Oops! Something went wrong';
                 $errorHeader = 'HTTP/1.1 500 Internal Server Error';
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -436,88 +364,82 @@ class ProductController extends BaseController
     /**
      * @method void add($productId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/add" Endpoint 
+     * "POST /v1/endpoints/products/{productId}/validities/" Endpoint 
      * 
      * Adds a validity to a product with the given ID
      */
     public function add($productId)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-
-        if (strtoupper($requestMethod) == 'POST') {
-
-            try {
-
-                $data = json_decode(file_get_contents("php://input"));
-
-                if ($productId === 0) {
-                    throw new BusinessException('Please provided a valid value for product id [Greater than 0 || Not Null]');
-                }
-
-                if (isset($data)) {
-                    $expirationDate = isset($data->expirationDate) ? $this->clean($data->expirationDate) : '';
-                    $quantity = isset($data->quantity) ? $this->clean($data->quantity) : '';
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for expirationDate and quantity [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if ((!$expirationDate && !$quantity) ||
-                (substr($expirationDate, 0, 1) === ' ' && !$quantity) ||
-                (!$expirationDate && substr($quantity, 0, 1) === ' ') ||
-                (substr($expirationDate, 0, 1) === ' ' && substr($quantity, 0, 1) === ' ')) {
-                    throw new BusinessException('Please provide valid values for expirationDate and quantity [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$expirationDate || substr($expirationDate, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide a valid value for expirationDate [Not Null and Not Blank].');
-                }
-                if (!$quantity || substr($quantity, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide valid value for quantity [Not Null and Not Blank or Greater than 0].');
-                }
-
-                $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
 
 
-                $expirationDate = $this->clean($data->expirationDate);
-                $quantity = filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT);
+        try {
 
-                if (!$productModel->getId() || !$expirationDate || !$quantity || substr($expirationDate, 0, 1) === ' ') {
-                    throw new BusinessException("Provide valid values for {productId}, {expirationDate} and {quantity}");
-                }
+            $data = json_decode(file_get_contents("php://input"));
 
-                $model = new ValidityInputModel();
-                $model->setProduct($productModel);
-                $model->setExpirationDate($expirationDate);
-                $model->setQuantity($quantity);
-
-                $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
-                    $this->service->add($model)
-                ), 'json');
+            if ($productId === 0) {
+                throw new BusinessException('Please provided a valid value for product id [Greater than 0 || Not Null]');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+
+            if (isset($data)) {
+                $expirationDate = isset($data->expirationDate) ? $this->clean($data->expirationDate) : '';
+                $quantity = isset($data->quantity) ? $this->clean($data->quantity) : '';
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+            else {
+                throw new BusinessException('Please provide valid values for expirationDate and quantity [Not Null and Not Blank or Greater than 0].');
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
+
+            if ((!$expirationDate && !$quantity) ||
+            (substr($expirationDate, 0, 1) === ' ' && !$quantity) ||
+            (!$expirationDate && substr($quantity, 0, 1) === ' ') ||
+            (substr($expirationDate, 0, 1) === ' ' && substr($quantity, 0, 1) === ' ')) {
+                throw new BusinessException('Please provide valid values for expirationDate and quantity [Not Null and Not Blank or Greater than 0].');
             }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$expirationDate || substr($expirationDate, 0, 1) === ' ') {
+                throw new BusinessException('Please provide a valid value for expirationDate [Not Null and Not Blank].');
             }
+            if (!$quantity || substr($quantity, 0, 1) === ' ') {
+                throw new BusinessException('Please provide valid value for quantity [Not Null and Not Blank or Greater than 0].');
+            }
+
+            $productModel = new ProductIdInputModel();
+            $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
+
+
+            $expirationDate = $this->clean($data->expirationDate);
+            $quantity = filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT);
+
+            if (!$productModel->getId() || !$expirationDate || !$quantity || substr($expirationDate, 0, 1) === ' ') {
+                throw new BusinessException("Provide valid values for {productId}, {expirationDate} and {quantity}");
+            }
+
+            $model = new ValidityInputModel();
+            $model->setProduct($productModel);
+            $model->setExpirationDate($expirationDate);
+            $model->setQuantity($quantity);
+
+            $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
+                $this->service->add($model)
+            ), 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
         }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+
 
         //Send Output
         if (!($errorMessage)) {
@@ -540,61 +462,54 @@ class ProductController extends BaseController
     /**
      * @method void view($productId, $validityId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/{validitiesId}" Endpoint 
+     * "GET /v1/endpoints/products/{productId}/validities/{validitiesId}" Endpoint 
      * 
      * View a validity to a product with the given ID
      */
     public function view($productId, $validityId)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
 
-            try {
+        try {
 
-                $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
-                    filter_var($productId, FILTER_VALIDATE_INT) : 0;
+            $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
+                filter_var($productId, FILTER_VALIDATE_INT) : 0;
 
-                $validityId = filter_var($validityId, FILTER_VALIDATE_INT) ? 
-                    filter_var($validityId, FILTER_VALIDATE_INT) : 0;
+            $validityId = filter_var($validityId, FILTER_VALIDATE_INT) ? 
+                filter_var($validityId, FILTER_VALIDATE_INT) : 0;
 
-                if ($productId === 0) {
-                    throw new BusinessException('Please provide valid values for productId [Not Null and Not Blank or Greater than 0]');
-                }
-
-                if ($validityId === 0) {
-                    throw new BusinessException('Please provide valid values for validityId [Not Null and Not Blank or Greater than 0]');
-                }
-
-                if ($productId === 0 && $validityId === 0) {
-                    throw new BusinessException('Please provide valid values for productId and validityId [Not Null and Not Blank or Greater than 0]');
-                }
-
-                $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
-                    $this->service->findOneValidity($productId, $validityId)), 'json');
-
+            if ($productId === 0) {
+                throw new BusinessException('Please provide valid values for productId [Not Null and Not Blank or Greater than 0]');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+
+            if ($validityId === 0) {
+                throw new BusinessException('Please provide valid values for validityId [Not Null and Not Blank or Greater than 0]');
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if ($productId === 0 && $validityId === 0) {
+                throw new BusinessException('Please provide valid values for productId and validityId [Not Null and Not Blank or Greater than 0]');
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
+
+            $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
+                $this->service->viewValidity($productId, $validityId)), 'json');
+
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -616,53 +531,56 @@ class ProductController extends BaseController
     }
 
     /**
-     * @method void listValidities($productId)
+     * @method void listValidities($productId, $page, $limit, $sorts)
      * 
-     * "/v1/endpoints/products/{productId}/validities/" Endpoint 
+     * "GET /v1/endpoints/products/{productId}/validities/" Endpoint 
      * 
      * Adds a validity to a product with the given ID
      */
 
-    public function listValidities($productId)
+    public function listValidities($productId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
-            try {
+        try {
 
-                $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
+            $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
 
-                $adapter = new ArrayAdapter(Utilities::toValidityOutputCollectionModel(
-                    $this->service->listValidities($id)
-                ));
+            $adapter = new ArrayAdapter(Utilities::toValidityOutputCollectionModel(
+                $this->service->listAllValidities($id, $page, $limit, $sorts)
+            ));
 
-                $pager = new Pagerfanta($adapter);
+            $totalQuantity = $this->service->getValiditiesExistance($id);
 
-                $factory = new PagerfantaFactory();
+            $pager = new Pagerfanta($adapter);
 
-                $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/products/' . $id . '/validities/', array()));
+            $paginatedCollection = new \Hateoas\Representation\PaginatedRepresentation(
+                new CollectionRepresentation($pager->getCurrentPageResults()),
+                '/v1/endpoints/products/' . $id . '/validities',
+                array(),
+                $page,
+                $limit,
+                ceil($totalQuantity / $limit),
+                'page',
+                'limit',
+                false,
+                $totalQuantity
+                );
 
-                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
-            }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
+            $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
         }
 
         //Send Output
@@ -685,7 +603,7 @@ class ProductController extends BaseController
     /**
      * @method void edit($productId, $validitiesId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/{validityId}/edit" Endpoint 
+     * "PUT /v1/endpoints/products/{productId}/validities/{validityId}" Endpoint 
      * 
      * Updates a validity from a product with the given ID
      */
@@ -694,73 +612,65 @@ class ProductController extends BaseController
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'PUT') {
+        try {
 
-            try {
+            $data = json_decode(file_get_contents("php://input"));
 
-                $data = json_decode(file_get_contents("php://input"));
+            $productModel = new ProductIdInputModel();
+            $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
 
-                $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
+            $validityId = filter_var($this->clean($validityId), FILTER_VALIDATE_INT);
 
-                $validityId = filter_var($this->clean($validityId), FILTER_VALIDATE_INT);
-
-                if ($productId === 0) {
-                    throw new BusinessException('Please provided a valid value for product id [Greater than 0 || Not Null]');
-                }
-
-                if (isset($data)) {
-                    $expirationDate = isset($data->expirationDate) ? $this->clean($data->expirationDate) : '';
-                    $quantity = isset($data->quantity) ? filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT) : '';
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for expirationDate and quantity [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if ((!$expirationDate && !$quantity) ||
-                (substr($expirationDate, 0, 1) === ' ' && !$quantity) ||
-                (!$expirationDate && substr($quantity, 0, 1) === ' ') ||
-                (substr($expirationDate, 0, 1) === ' ' && substr($quantity, 0, 1) === ' ')) {
-                    throw new BusinessException('Please provide valid values for expirationDate and quantity [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$expirationDate || substr($expirationDate, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide a valid value for expirationDate [Not Null and Not Blank].');
-                }
-                if (!$quantity || substr($quantity, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide valid value for quantity [Not Null and Not Blank or Greater than 0].');
-                }
-
-                $model = new ValidityInputModel();
-                $model->setProduct($productModel);
-                $model->setExpirationDate($expirationDate);
-                $model->setQuantity($quantity);
-
-                $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
-                    $this->service->edit($validityId, $model)), 'json');
+            if ($productId === 0) {
+                throw new BusinessException('Please provided a valid value for product id [Greater than 0 || Not Null]');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+
+            if (isset($data)) {
+                $expirationDate = isset($data->expirationDate) ? $this->clean($data->expirationDate) : '';
+                $quantity = isset($data->quantity) ? filter_var($this->clean($data->quantity), FILTER_VALIDATE_FLOAT) : '';
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+            else {
+                throw new BusinessException('Please provide valid values for expirationDate and quantity [Not Null and Not Blank or Greater than 0].');
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
+
+            if ((!$expirationDate && !$quantity) ||
+            (substr($expirationDate, 0, 1) === ' ' && !$quantity) ||
+            (!$expirationDate && substr($quantity, 0, 1) === ' ') ||
+            (substr($expirationDate, 0, 1) === ' ' && substr($quantity, 0, 1) === ' ')) {
+                throw new BusinessException('Please provide valid values for expirationDate and quantity [Not Null and Not Blank or Greater than 0].');
             }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$expirationDate || substr($expirationDate, 0, 1) === ' ') {
+                throw new BusinessException('Please provide a valid value for expirationDate [Not Null and Not Blank].');
             }
+            if (!$quantity || substr($quantity, 0, 1) === ' ') {
+                throw new BusinessException('Please provide valid value for quantity [Not Null and Not Blank or Greater than 0].');
+            }
+
+            $model = new ValidityInputModel();
+            $model->setProduct($productModel);
+            $model->setExpirationDate($expirationDate);
+            $model->setQuantity($quantity);
+
+            $outputModel = $this->hateoas->serialize(Utilities::toValidityOutputModel(
+                $this->service->edit($validityId, $model)), 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -784,7 +694,7 @@ class ProductController extends BaseController
     /**
      * @method void remove($productId, $validityId)
      * 
-     * "/v1/endpoints/products/{productId}/validities/{validityId}/remove" Endpoint 
+     * "DELETE /v1/endpoints/products/{productId}/validities/{validityId}" Endpoint 
      * 
      * Removes a validity from a product with the given ID
      */
@@ -793,43 +703,35 @@ class ProductController extends BaseController
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'DELETE') {
+        try {
 
-            try {
+            $productId = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
+            $validityId = filter_var($this->clean($validityId), FILTER_VALIDATE_INT);
 
-                $productId = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
-                $validityId = filter_var($this->clean($validityId), FILTER_VALIDATE_INT);
-
-                if ($this->service->remove($validityId, $productId)) {
-                    $outputModel = '';
-                }
-                else {
-                    $errorMessage = 'Oops! Something went wrong';
-                    $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-                }
+            if ($this->service->remove($productId, $validityId)) {
+                $outputModel = '';
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            else {
+                $errorMessage = 'Oops! Something went wrong';
                 $errorHeader = 'HTTP/1.1 500 Internal Server Error';
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -853,7 +755,7 @@ class ProductController extends BaseController
     /**
      * @method void viewSupplier($productId, $supplierId)
      * 
-     * "/v1/endpoints/products/{productId}/suppliers/{supplierId}" Endpoint 
+     * "GET /v1/endpoints/products/{productId}/suppliers/{supplierId}" Endpoint 
      * 
      * Get a supplier by its ID of the product with the given ID
      */
@@ -861,48 +763,40 @@ class ProductController extends BaseController
     public function viewSupplier($productId, $supplierId)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
+        try {
 
-            try {
+            $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
+                filter_var($productId, FILTER_VALIDATE_INT) : 0;
 
-                $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
-                    filter_var($productId, FILTER_VALIDATE_INT) : 0;
+            $supplierId = filter_var($supplierId, FILTER_VALIDATE_INT) ? 
+                filter_var($supplierId, FILTER_VALIDATE_INT) : 0;
 
-                $supplierId = filter_var($supplierId, FILTER_VALIDATE_INT) ? 
-                    filter_var($supplierId, FILTER_VALIDATE_INT) : 0;
-
-                if ($productId && $supplierId) {
-                    $outputModel = $this->hateoas->serialize(Utilities::toSupplierOutputModel(
-                        $this->service->viewSupplier($productId, $supplierId)), 'json');
-                }
-                else {
-                    $errorMessage = 'Provide valid parameters. Both parameters must be integer and greater than 0 {'
-                        . $productId . ', ' . $supplierId . '}';
-                    $errorHeader = 'HTTP/1.1 400 Bad Request';
-                }
+            if ($productId && $supplierId) {
+                $outputModel = $this->hateoas->serialize(Utilities::toSupplierOutputModel(
+                    $this->service->viewSupplier($productId, $supplierId)), 'json');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            else {
+                $errorMessage = 'Provide valid parameters. Both parameters must be integer and greater than 0 {'
+                    . $productId . ', ' . $supplierId . '}';
                 $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -924,53 +818,56 @@ class ProductController extends BaseController
     }
 
     /**
-     * @method void listSuppliers($productId)
+     * @method void listSuppliers($productId, $page, $limit, $sorts)
      * 
-     * "/v1/endpoints/products/{productId}/suppliers/" Endpoint 
+     * "GET /v1/endpoints/products/{productId}/suppliers/" Endpoint 
      * 
      * Get a list of supplier of the product with the given ID
      */
 
-    public function listSuppliers($productId)
+    public function listSuppliers($productId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
-            try {
+        try {
 
-                $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
+            $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
 
-                $adapter = new ArrayAdapter(Utilities::toSupplierOutputCollectionModel(
-                    $this->service->listSuppliers($productId)
-                ));
+            $totalQuantity = $this->service->getSuppliersExistance($id);
 
-                $pager = new Pagerfanta($adapter);
+            $adapter = new ArrayAdapter(Utilities::toSupplierOutputCollectionModel(
+                $this->service->listSuppliers($id, $page, $limit, $sorts)
+            ));
 
-                $factory = new PagerfantaFactory();
+            $pager = new Pagerfanta($adapter);
 
-                $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/products/' . $productId . '/suppliers/', array()));
+            $paginatedCollection = new \Hateoas\Representation\PaginatedRepresentation(
+                new CollectionRepresentation($pager->getCurrentPageResults()),
+                '/v1/endpoints/products/' . $id . '/suppliers',
+                array(),
+                $page,
+                $limit,
+                ceil($totalQuantity / $limit),
+                'page',
+                'limit',
+                false,
+                $totalQuantity
+                );
 
-                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
-            }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
+            $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
         }
 
         //Send Output
@@ -992,53 +889,56 @@ class ProductController extends BaseController
 
 
     /**
-     * @method void listStorages($productId)
+     * @method void listStorages($productId, $page, $limit, $sorts)
      * 
-     * "/v1/endpoints/products/{productId}/storages/" Endpoint 
+     * "GET /v1/endpoints/products/{productId}/storages/" Endpoint 
      * 
      * Get a list of storages of the product with the given ID
      */
 
-    public function listStorages($productId)
+    public function listStorages($productId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
-            try {
+        try {
 
-                $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
+            $id = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
 
-                $adapter = new ArrayAdapter(Utilities::toStorageOutputCollectionModel(
-                    $this->service->listStorages($productId)
-                ));
+            $totalQuantity = $this->service->getStoragesExistance($id);
 
-                $pager = new Pagerfanta($adapter);
+            $adapter = new ArrayAdapter(Utilities::toStorageOutputCollectionModel(
+                $this->service->listStorages($id, $page, $limit, $sorts)
+            ));
 
-                $factory = new PagerfantaFactory();
+            $pager = new Pagerfanta($adapter);
 
-                $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/products/' . $productId . '/suppliers/', array()));
+            $paginatedCollection = new \Hateoas\Representation\PaginatedRepresentation(
+                new CollectionRepresentation($pager->getCurrentPageResults()),
+                '/v1/endpoints/products/' . $id . '/storages',
+                array(),
+                $page,
+                $limit,
+                ceil($totalQuantity / $limit),
+                'page',
+                'limit',
+                false,
+                $totalQuantity
+                );
 
-                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
-            }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
+            $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
         }
 
         //Send Output
@@ -1069,48 +969,40 @@ class ProductController extends BaseController
     public function viewStorage($productId, $storageId)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
+        try {
 
-            try {
+            $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
+                filter_var($productId, FILTER_VALIDATE_INT) : 0;
 
-                $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
-                    filter_var($productId, FILTER_VALIDATE_INT) : 0;
+            $storageId = filter_var($storageId, FILTER_VALIDATE_INT) ? 
+                filter_var($storageId, FILTER_VALIDATE_INT) : 0;
 
-                $storageId = filter_var($storageId, FILTER_VALIDATE_INT) ? 
-                    filter_var($storageId, FILTER_VALIDATE_INT) : 0;
-
-                if ($productId && $storageId) {
-                    $outputModel = $this->hateoas->serialize(Utilities::toStorageOutputModel(
-                        $this->service->viewStorage($productId, $storageId)), 'json');
-                }
-                else {
-                    $errorMessage = 'Provide valid parameters. Both parameters must be integer and greater than 0 {'
-                        . $productId . ', ' . $storageId . '}';
-                    $errorHeader = 'HTTP/1.1 400 Bad Request';
-                }
+            if ($productId && $storageId) {
+                $outputModel = $this->hateoas->serialize(Utilities::toStorageOutputModel(
+                    $this->service->viewStorage($productId, $storageId)), 'json');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            else {
+                $errorMessage = 'Provide valid parameters. Both parameters must be integer and greater than 0 {'
+                    . $productId . ', ' . $storageId . '}';
                 $errorHeader = 'HTTP/1.1 400 Bad Request';
             }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -1129,6 +1021,20 @@ class ProductController extends BaseController
             )
             );
         }
+    }
+
+    public function methodNotSupported($requestMethod)
+    {
+        $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', $requestMethod);
+        $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+
+        $this->sendOutput(
+            json_encode(array(
+            'error' => $errorMessage
+        )), array(
+            'Content-Type: application/json', $errorHeader
+        )
+        );
     }
 
 }

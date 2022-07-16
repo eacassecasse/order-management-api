@@ -1,4 +1,5 @@
 <?php
+
 namespace app\domain\repository;
 
 use App\domain\exception\BusinessException;
@@ -37,16 +38,18 @@ class StorageRepository extends GenericRepository
                         (designation, code)
                       VALUES (?,?)";
 
-            $statement = $this->executeStatement($query, array(
-                $designation,
-                $code));
+            $statement = $this->executeStatement(
+                $query,
+                array($designation, $code)
+            );
 
             $connection->commit();
 
             if ($statement->insert_id > 0) {
-                $storage = $this->
-                    select("SELECT * FROM storage WHERE id = ?", array(
-                    $statement->insert_id))->fetch_assoc();
+                $storage = $this->select(
+                    "SELECT * FROM storage WHERE id = ?",
+                    array($statement->insert_id)
+                )->fetch_assoc();
             }
         }
         catch (\mysqli_sql_exception $ex) {
@@ -60,13 +63,22 @@ class StorageRepository extends GenericRepository
         return $storage;
     }
 
-    public function findAll()
+    public function findAll(int $page, int $limit, array $sorts)
     {
 
         try {
-            $query = "SELECT * FROM storage";
 
-            $result = $this->select($query);
+            $offset = ($limit * $page) - $limit;
+
+            $query = "SELECT 
+                            * 
+                        FROM 
+                            storage 
+                        ORDER BY 
+                            {$this->getOrderByString($sorts)} 
+                        LIMIT ?, ?";
+
+            $result = $this->select($query, array($offset, $limit));
 
             if ($result->num_rows === 0) {
                 $storages = null;
@@ -106,13 +118,23 @@ class StorageRepository extends GenericRepository
         return $storage;
     }
 
-    public function findByDesignation($designation)
+    public function findByParams(array $options, int $page, int $limit, array $sorts)
     {
         try {
 
-            $query = "SELECT * FROM storage WHERE designation = ?";
+            $offset = ($limit * $page) - $limit;
 
-            $result = $this->select($query, array($designation));
+            $query = "SELECT 
+                            * 
+                        FROM 
+                            storage
+                        WHERE
+                            {$this->whereClauseBuilder($options)}
+                        ORDER BY 
+                            {$this->getOrderByString($sorts)} 
+                        LIMIT ?, ?";
+
+            $result = $this->select($query, array($offset, $limit));
 
             if ($result->num_rows === 0) {
                 $storages = null;
@@ -130,28 +152,6 @@ class StorageRepository extends GenericRepository
 
         return $storages;
     }
-
-    public function findByCode($code)
-    {
-        try {
-
-            $query = "SELECT * FROM storage WHERE code = ?";
-
-            $result = $this->select($query, array($code));
-
-            if ($result->num_rows === 0) {
-                $storage = null;
-            }
-
-            $storage = $result->fetch_assoc();
-        }
-        catch (\mysqli_sql_exception $ex) {
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-
-        return $storage;
-    }
-
     public function update($object)
     {
 
@@ -176,11 +176,10 @@ class StorageRepository extends GenericRepository
                       WHERE 
                         id = ?";
 
-            $statement = $this->
-                executeStatement($query, array(
-                $designation,
-                $code,
-                $id));
+            $statement = $this->executeStatement(
+                $query,
+                array($designation, $code, $id)
+            );
 
 
             $connection->commit();
@@ -222,5 +221,11 @@ class StorageRepository extends GenericRepository
             throw new MYSQLTransactionException($ex->getMessage());
         }
     }
+
+    public function getTotal(): int
+    {
+        return $this->getTotalQuantity("storage");
+    }
+
 
 }

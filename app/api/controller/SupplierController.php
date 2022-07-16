@@ -24,8 +24,7 @@ use Hateoas\HateoasBuilder;
 use Hateoas\UrlGenerator\CallableUrlGenerator;
 use Pagerfanta\Adapter\ArrayAdapter;
 use Pagerfanta\Pagerfanta;
-use Hateoas\Representation\Factory\PagerfantaFactory;
-use Hateoas\Configuration\Route;
+use Hateoas\Representation\CollectionRepresentation;
 
 
 
@@ -52,7 +51,7 @@ class SupplierController extends BaseController
     /**
      * @method void create()
      * 
-     * "/v1/endpoints/suppliers/create" Endpoint 
+     * "POST /v1/endpoints/suppliers" Endpoint 
      * 
      * Creates a new supplier
      */
@@ -60,53 +59,46 @@ class SupplierController extends BaseController
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'POST') {
-            try {
+        try {
 
-                $data = json_decode(file_get_contents("php://input"));
+            $data = json_decode(file_get_contents("php://input"));
 
-                if (isset($data)) {
-                    $name = isset($data->name) ? $this->clean($data->name) : '';
-                    $vatNumber = isset($data->vatNumber) ? filter_var($this->clean($data->vatNumber), FILTER_VALIDATE_INT) : 0;
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$vatNumber and (!$name || substr($name, 0, 1) === ' ')) {
-                    throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$name || substr($name, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide valid value for name [Not Null and Not Blank].');
-                }
-
-                if (!$vatNumber) {
-                    throw new BusinessException('Please provide valid value for vatNumber [Not Null and Not Blank or Greater than 0].');
-                }
-
-                $model = new SupplierInputModel();
-                $model->setName($name);
-                $model->setVatNumber($vatNumber);
-
-                $outputModel = $this->hateoas->serialize(
-                    Utilities::toSupplierOutputModel($this->service->create($model)), 'json');
-
+            if (isset($data)) {
+                $name = isset($data->name) ? $this->clean($data->name) : '';
+                $vatNumber = isset($data->vatNumber) ? filter_var($this->clean($data->vatNumber), FILTER_VALIDATE_INT) : 0;
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTT/1.1 500 Internal Server Error';
+            else {
+                throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
             }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$vatNumber and (!$name || substr($name, 0, 1) === ' ')) {
+                throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
             }
+
+            if (!$name || substr($name, 0, 1) === ' ') {
+                throw new BusinessException('Please provide valid value for name [Not Null and Not Blank].');
+            }
+
+            if (!$vatNumber) {
+                throw new BusinessException('Please provide valid value for vatNumber [Not Null and Not Blank or Greater than 0].');
+            }
+
+            $model = new SupplierInputModel();
+            $model->setName($name);
+            $model->setVatNumber($vatNumber);
+
+            $outputModel = $this->hateoas->serialize(
+                Utilities::toSupplierOutputModel($this->service->create($model)), 'json');
+
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTT/1.1 500 Internal Server Error';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -124,77 +116,44 @@ class SupplierController extends BaseController
     /**
      * @method void findOne($id)
      * 
-     * "/v1/endpoints/suppliers/{id}" Endpoint 
+     * "GET /v1/endpoints/suppliers/{id}" Endpoint 
      * 
      * Get a supplier by a given ID
-     * 
-     * You can either get a supplier by his name 
-     * or vatNumber passing one of this variable as a query parameters
      */
 
     public function findOne($id = null)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
 
-            try {
+        try {
 
-                $id = filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT));
+            $id = filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT));
 
-                if ($id) {
+            if ($id) {
 
-                    $outputModel = $this->hateoas->serialize(
-                        Utilities::toSupplierOutputModel($this->service->findOne($id)), 'json');
-                }
-                else {
-                    $query = parse_url(filter_input(INPUT_SERVER, 'REQUEST_URI'), PHP_URL_QUERY);
-                    $toArrayQuery = parse_str($query, $arrayQuery);
-
-                    if (count($arrayQuery)) {
-                        if (isset($arrayQuery['name'])) {
-                            $name = filter_var($arrayQuery['name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-
-                            $outputModel = $this->hateoas->serialize(
-                                Utilities::toSupplierOutputModel($this->service->findByName($name)), 'json');
-
-                        }
-                        else if (isset($arrayQuery['vatNumber'])) {
-                            $options = array("flags" => FILTER_VALIDATE_INT);
-                            $vatNumber = filter_var($arrayQuery['vatNumber'], FILTER_SANITIZE_FULL_SPECIAL_CHARS, $options);
-
-                            if ($vatNumber) {
-                                $outputModel = $this->hateoas->serialize(
-                                    Utilities::toSupplierOutputModel($this->service->findByVatNumber($vatNumber)), 'json');
-                            }
-                        }
-                    }
-                    else {
-                        throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
-                    }
-                }
+                $outputModel = $this->hateoas->serialize(
+                    Utilities::toSupplierOutputModel($this->service->findOne($id)), 'json');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransaction) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransaction);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+            else {
+                throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
             }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransaction) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransaction);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -210,57 +169,55 @@ class SupplierController extends BaseController
     }
 
     /**
-     * @method void find()
+     * @method void find($page, $limit, $sorts)
      * 
-     * "/v1/endpoints/suppliers" Endpoint 
+     * "GET /v1/endpoints/suppliers" Endpoint 
      * 
      * Get a list of suppliers
      */
 
-    public function find()
+    public function find($page, $limit, $sorts)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
-            try {
+        try {
 
-                $adapter = new ArrayAdapter(
-                    Utilities::toSupplierOutputCollectionModel($this->service->findAll()));
+            $adapter = new ArrayAdapter(
+                Utilities::toSupplierOutputCollectionModel(
+                $this->service->findAll($page, $limit, $sorts)
+            )
+                );
 
-                $pager = new Pagerfanta($adapter);
+            $totalQuantity = $this->service->getSuppliersExistance();
 
-                if ($adapter->getNbResults() > 10) {
-                    $pager->setMaxPerPage(8);
-                }
-                else {
+            $pager = new Pagerfanta($adapter);
 
-                    $pager->setMaxPerPage(4);
-                }
+            $paginatedCollection = new \Hateoas\Representation\PaginatedRepresentation(
+                new CollectionRepresentation($pager->getCurrentPageResults()),
+                '/v1/endpoints/suppliers',
+                array(),
+                $page,
+                $limit,
+                ceil($totalQuantity / $limit),
+                'page',
+                'limit',
+                false,
+                $totalQuantity
+                );
 
-                $pagerFantaFactory = new PagerfantaFactory();
-
-                $paginatedCollection = $pagerFantaFactory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/suppliers/', array()));
-
-                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
-            }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
+            $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
         }
 
         //Send Output
@@ -278,7 +235,7 @@ class SupplierController extends BaseController
     /**
      * @method void update($id)
      * 
-     * "/v1/endpoints/suppliers/{id}/update" Endpoint 
+     * "PUT /v1/endpoints/suppliers/{id}/update" Endpoint 
      * 
      * Updates a supplier with the given ID
      */
@@ -286,63 +243,56 @@ class SupplierController extends BaseController
     public function update(int $id)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'PUT') {
-            try {
+        try {
 
-                $data = json_decode(file_get_contents("php://input"));
+            $data = json_decode(file_get_contents("php://input"));
 
-                $id = isset($id) ? 
-                    filter_var($this->clean($id), FILTER_VALIDATE_INT) : 0;
+            $id = isset($id) ? 
+                filter_var($this->clean($id), FILTER_VALIDATE_INT) : 0;
 
-                if (isset($data)) {
-                    $name = isset($data->name) ? $this->clean($data->name) : '';
-                    $vatNumber = isset($data->vatNumber) ? filter_var($this->clean($data->vatNumber), FILTER_VALIDATE_INT) : 0;
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$vatNumber and (!$name || substr($name, 0, 1) === ' ')) {
-                    throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$name || substr($name, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide valid value for name [Not Null and Not Blank].');
-                }
-
-                if (!$vatNumber) {
-                    throw new BusinessException('Please provide valid value for vatNumber [Not Null and Not Blank or Greater than 0].');
-                }
-
-                $model = new SupplierInputModel();
-                $model->setName($name);
-                $model->setVatNumber($vatNumber);
-
-                $outputModel = $this->hateoas->serialize(Utilities::toSupplierOutputModel(
-                    $this->service->update($id, $model)), 'json');
+            if (isset($data)) {
+                $name = isset($data->name) ? $this->clean($data->name) : '';
+                $vatNumber = isset($data->vatNumber) ? filter_var($this->clean($data->vatNumber), FILTER_VALIDATE_INT) : 0;
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+            else {
+                throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$vatNumber and (!$name || substr($name, 0, 1) === ' ')) {
+                throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
+
+            if (!$name || substr($name, 0, 1) === ' ') {
+                throw new BusinessException('Please provide valid value for name [Not Null and Not Blank].');
             }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$vatNumber) {
+                throw new BusinessException('Please provide valid value for vatNumber [Not Null and Not Blank or Greater than 0].');
             }
+
+            $model = new SupplierInputModel();
+            $model->setName($name);
+            $model->setVatNumber($vatNumber);
+
+            $outputModel = $this->hateoas->serialize(Utilities::toSupplierOutputModel(
+                $this->service->update($id, $model)), 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -360,7 +310,7 @@ class SupplierController extends BaseController
     /**
      * @method void delete($id)
      * 
-     * "/v1/endpoints/suppliers/{id}/delete" Endpoint 
+     * "DELETE /v1/endpoints/suppliers/{id}/delete" Endpoint 
      * 
      * Delete a supplier with the given ID
      */
@@ -368,42 +318,34 @@ class SupplierController extends BaseController
     public function delete($id)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'DELETE') {
+        try {
 
-            try {
+            $id = ($id) ? filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT)) : 0;
 
-                $id = ($id) ? filter_var($id, FILTER_SANITIZE_NUMBER_INT, array("flags" => FILTER_VALIDATE_INT)) : 0;
-
-                if (!$id) {
-                    throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if ($this->service->delete($id)) {
-                    $outputModel = '';
-                }
-                else {
-                    $errorMessage = 'Oops! Something went wrong';
-                    $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-                }
+            if (!$id) {
+                throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+
+            if ($this->service->delete($id)) {
+                $outputModel = '';
+            }
+            else {
+                $errorMessage = 'Oops! Something went wrong';
                 $errorHeader = 'HTTP/1.1 500 Internal Server Error';
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -422,76 +364,68 @@ class SupplierController extends BaseController
     /**
      * @method void add($supplierId)
      * 
-     * "/v1/endpoints/suppliers/{supplierId}/products/add" Endpoint 
+     * "POST /v1/endpoints/suppliers/{supplierId}/products/add" Endpoint 
      * 
      * Adds a product to a supplier with the given ID
      */
     public function add($supplierId)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'POST') {
+        try {
 
-            try {
+            $data = json_decode(file_get_contents("php://input"));
 
-                $data = json_decode(file_get_contents("php://input"));
+            $supplierModel = new SupplierIdInputModel();
+            $supplierModel->setId(filter_var($this->clean($supplierId), FILTER_VALIDATE_INT));
 
-                $supplierModel = new SupplierIdInputModel();
-                $supplierModel->setId(filter_var($this->clean($supplierId), FILTER_VALIDATE_INT));
-
-                if (isset($data)) {
-                    $productId = isset($data->productId) ? filter_var($this->clean($data->productId), FILTER_VALIDATE_INT) : 0;
-                    $price = isset($data->price) ? filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT) : 0;
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$productId && !$price) {
-                    throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$productId) {
-                    throw new BusinessException('Please provide valid value for productId [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$price) {
-                    throw new BusinessException('Please provide valid value price [Not Null and Not Blank or Greater than 0].');
-                }
-
-                $productModel = new ProductIdInputModel();
-                $productModel->setId($productId);
-
-                $model = new SupplierProductInputModel();
-                $model->setSupplier($supplierModel);
-                $model->setProduct($productModel);
-                $model->setPrice($price);
-
-                $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModel(
-                    $this->service->add($model)
-                ), 'json');
+            if (isset($data)) {
+                $productId = isset($data->productId) ? filter_var($this->clean($data->productId), FILTER_VALIDATE_INT) : 0;
+                $price = isset($data->price) ? filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT) : 0;
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+            else {
+                throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$productId && !$price) {
+                throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
+
+            if (!$productId) {
+                throw new BusinessException('Please provide valid value for productId [Not Null and Not Blank or Greater than 0].');
             }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$price) {
+                throw new BusinessException('Please provide valid value price [Not Null and Not Blank or Greater than 0].');
             }
+
+            $productModel = new ProductIdInputModel();
+            $productModel->setId($productId);
+
+            $model = new SupplierProductInputModel();
+            $model->setSupplier($supplierModel);
+            $model->setProduct($productModel);
+            $model->setPrice($price);
+
+            $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModel(
+                $this->service->add($model)
+            ), 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -515,54 +449,47 @@ class SupplierController extends BaseController
     /**
      * @method void view($supplierId, $productId)
      * 
-     * "/v1/endpoints/suppliers/{supplierId}/products/{productId}" Endpoint 
+     * "GET /v1/endpoints/suppliers/{supplierId}/products/{productId}" Endpoint 
      * 
      * Adds a product to a supplier with the given ID
      */
     public function view($supplierId, $productId)
     {
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
+        try {
 
-            try {
+            $supplierId = filter_var($supplierId, FILTER_VALIDATE_INT) ? 
+                filter_var($supplierId, FILTER_VALIDATE_INT) : 0;
 
-                $supplierId = filter_var($supplierId, FILTER_VALIDATE_INT) ? 
-                    filter_var($supplierId, FILTER_VALIDATE_INT) : 0;
+            $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
+                filter_var($productId, FILTER_VALIDATE_INT) : 0;
 
-                $productId = filter_var($productId, FILTER_VALIDATE_INT) ? 
-                    filter_var($productId, FILTER_VALIDATE_INT) : 0;
-
-                if ($productId && $supplierId) {
-                    $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModel(
-                        $this->service->findOneProduct($productId, $supplierId)), 'json');
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for productId and supplierId [Not Null and Not Blank or Greater than 0].');
-                }
+            if ($productId && $supplierId) {
+                $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModel(
+                    $this->service->viewProduct($productId, $supplierId)), 'json');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+            else {
+                throw new BusinessException('Please provide valid values for productId and supplierId [Not Null and Not Blank or Greater than 0].');
             }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
         }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+
 
         //Send Output
         if (!($errorMessage)) {
@@ -583,57 +510,60 @@ class SupplierController extends BaseController
     }
 
     /**
-     * @method void list($supplierId)
+     * @method void list($supplierId, $page, $limit, $sorts)
      * 
-     * "/v1/endpoints/suppliers/{supplierId}/products/" Endpoint 
+     * "GET /v1/endpoints/suppliers/{supplierId}/products/" Endpoint 
      * 
      * Adds a product to a supplier with the given ID
      */
 
-    public function list($supplierId)
+    public function list($supplierId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'GET') {
-            try {
+        try {
 
-                $id = filter_var($this->clean($supplierId), FILTER_VALIDATE_INT);
+            $id = filter_var($this->clean($supplierId), FILTER_VALIDATE_INT);
 
-                if (!$id) {
-                    throw new BusinessException('Please provide a valid supplierId [Not Null and Not Blank or Greater than 0].');
-                }
-
-                $adapter = new ArrayAdapter(Utilities::toSupplierProductOutputCollectionModel(
-                    $this->service->listProducts($id)
-                ));
-
-                $pager = new Pagerfanta($adapter);
-
-                $factory = new PagerfantaFactory();
-
-                $paginatedCollection = $factory->createRepresentation(
-                    $pager, new Route('/v1/endpoints/suppliers/' . $id . '/products/', array()));
-
-                $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
+            if (!$id) {
+                throw new BusinessException('Please provide a valid supplierId [Not Null and Not Blank or Greater than 0].');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-            }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
+
+            $adapter = new ArrayAdapter(Utilities::toSupplierProductOutputCollectionModel(
+                $this->service->listAll($id, $page, $limit, $sorts)
+            ));
+
+            $totalQuantity = $this->service->getSupplierProductsExistance($id);
+
+            $pager = new Pagerfanta($adapter);
+
+            $paginatedCollection = new \Hateoas\Representation\PaginatedRepresentation(
+                new CollectionRepresentation($pager->getCurrentPageResults()),
+                '/v1/endpoints/suppliers' . $id . '/products',
+                array(),
+                $page,
+                $limit,
+                ceil($totalQuantity / $limit),
+                'page',
+                'limit',
+                false,
+                $totalQuantity
+                );
+
+            $outputModel = $this->hateoas->serialize($paginatedCollection, 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
         }
 
         //Send Output
@@ -656,7 +586,7 @@ class SupplierController extends BaseController
     /**
      * @method void edit($supplierId, $productId)
      * 
-     * "/v1/endpoints/suppliers/{supplierId}/products/{productId}/edit" Endpoint 
+     * "PUT /v1/endpoints/suppliers/{supplierId}/products/{productId}/edit" Endpoint 
      * 
      * Updates a product from a supplier with the given ID
      */
@@ -665,69 +595,61 @@ class SupplierController extends BaseController
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'PUT') {
+        try {
 
-            try {
+            $data = json_decode(file_get_contents("php://input"));
 
-                $data = json_decode(file_get_contents("php://input"));
+            $productModel = new ProductIdInputModel();
+            $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
 
-                $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
-
-                if (isset($data)) {
-                    $price = isset($data->price) ? filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT) : 0;
-                }
-                else {
-                    throw new BusinessException('Please provide valid value for price [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$productId && !$price) {
-                    throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$productId) {
-                    throw new BusinessException('Please provide valid value for productId [Not Null and Not Blank or Greater than 0].');
-                }
-
-                if (!$price) {
-                    throw new BusinessException('Please provide valid value price [Not Null and Not Blank or Greater than 0].');
-                }
-
-                $supplierModel = new SupplierIdInputModel();
-                $supplierModel->setId(filter_var($this->clean($supplierId), FILTER_VALIDATE_INT));
-
-                $price = filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT);
-
-                $model = new SupplierProductInputModel();
-                $model->setProduct($productModel);
-                $model->setSupplier($supplierModel);
-                $model->setPrice($price);
-
-                $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModel(
-                    $this->service->edit($model)), 'json');
+            if (isset($data)) {
+                $price = isset($data->price) ? filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT) : 0;
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+            else {
+                throw new BusinessException('Please provide valid value for price [Not Null and Not Blank or Greater than 0].');
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$productId && !$price) {
+                throw new BusinessException('Please provide valid values for productId and price [Not Null and Not Blank or Greater than 0].');
             }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
+
+            if (!$productId) {
+                throw new BusinessException('Please provide valid value for productId [Not Null and Not Blank or Greater than 0].');
             }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
+
+            if (!$price) {
+                throw new BusinessException('Please provide valid value price [Not Null and Not Blank or Greater than 0].');
             }
+
+            $supplierModel = new SupplierIdInputModel();
+            $supplierModel->setId(filter_var($this->clean($supplierId), FILTER_VALIDATE_INT));
+
+            $price = filter_var($this->clean($data->price), FILTER_VALIDATE_FLOAT);
+
+            $model = new SupplierProductInputModel();
+            $model->setProduct($productModel);
+            $model->setSupplier($supplierModel);
+            $model->setPrice($price);
+
+            $outputModel = $this->hateoas->serialize(Utilities::toSupplierProductOutputModel(
+                $this->service->edit($model)), 'json');
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -751,7 +673,7 @@ class SupplierController extends BaseController
     /**
      * @method void remove($supplierId, $productId)
      * 
-     * "/v1/endpoints/suppliers/{supplierId}/products/{productId}/remove" Endpoint 
+     * "DELETE /v1/endpoints/suppliers/{supplierId}/products/{productId}/remove" Endpoint 
      * 
      * Removes a product from a supplier with the given ID
      */
@@ -760,56 +682,40 @@ class SupplierController extends BaseController
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'DELETE') {
+        try {
 
-            try {
+            $productId = filter_var($this->clean($productId), FILTER_VALIDATE_INT);
 
-                $data = json_decode(file_get_contents("php://input"));
+            $supplierId = filter_var($this->clean($supplierId), FILTER_VALIDATE_INT);
 
-                $productModel = new ProductIdInputModel();
-                $productModel->setId(filter_var($this->clean($productId), FILTER_VALIDATE_INT));
-
-                $supplierModel = new SupplierIdInputModel();
-                $supplierModel->setId(filter_var($this->clean($supplierId), FILTER_VALIDATE_INT));
-
-                if (!$productModel->getId() || !$supplierModel->getId()) {
-                    throw new BusinessException('Please provide valid values for productId and supplierId [Not Null and Not Blank or Greater than 0].');
-                }
-
-                $model = new SupplierProductInputModel();
-                $model->setProduct($productModel);
-                $model->setSupplier($supplierModel);
-
-                if ($this->service->remove($model)) {
-                    $outputModel = '';
-                }
-                else {
-                    $errorMessage = 'Oops! Something went wrong';
-                    $errorHeader = 'HTTP/1.1 500 Internal Server Error';
-                }
+            if (!$productId || !$supplierId) {
+                throw new BusinessException('Please provide valid values for productId and supplierId [Not Null and Not Blank or Greater than 0].');
             }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+
+            if ($this->service->remove($supplierId, $productId)) {
+                $outputModel = '';
+            }
+            else {
+                $errorMessage = 'Oops! Something went wrong';
                 $errorHeader = 'HTTP/1.1 500 Internal Server Error';
             }
-            catch (MYSQLTransactionException $mysqlTransactionException) {
-                $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-            catch (EntityNotFoundException $entityNotFoundException) {
-                $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
-                $errorHeader = 'HTTP/1.1 404 Not Found';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
         }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+        catch (ConnectionException $connectionException) {
+            $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
+            $errorHeader = 'HTTP/1.1 500 Internal Server Error';
+        }
+        catch (MYSQLTransactionException $mysqlTransactionException) {
+            $errorMessage = ApiExceptionHandler::handleMYSQLTransactionException($mysqlTransactionException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
+        }
+        catch (EntityNotFoundException $entityNotFoundException) {
+            $errorMessage = ApiExceptionHandler::handleEntityNotFoundException($entityNotFoundException);
+            $errorHeader = 'HTTP/1.1 404 Not Found';
+        }
+        catch (BusinessException $businessException) {
+            $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
+            $errorHeader = 'HTTP/1.1 400 Bad Request';
         }
 
         //Send Output
@@ -829,4 +735,19 @@ class SupplierController extends BaseController
             );
         }
     }
+
+    public function methodNotSupported($requestMethod)
+    {
+        $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', $requestMethod);
+        $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
+
+        $this->sendOutput(
+            json_encode(array(
+            'error' => $errorMessage
+        )), array(
+            'Content-Type: application/json', $errorHeader
+        )
+        );
+    }
+
 }

@@ -62,8 +62,7 @@ class StoredProduct extends ObjectModel
         }
 
         return $object->getProduct()->getId() == $this->getProduct()->getId() &&
-            $object->getStorage()->getId() == $this->getStorage()->getId() &&
-            $object->getQuantity() == $this->getQuantity();
+            $object->getStorage()->getId() == $this->getStorage()->getId();
     }
 
 }

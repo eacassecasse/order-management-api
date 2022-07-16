@@ -48,12 +48,23 @@ class SupplierProductRepository extends GenericRepository
             $connection->commit();
 
             $supplierProduct = $this->
-                select("SELECT * FROM 
-                                        supplier_products 
-                                    WHERE 
-                                        product_id = ? 
-                                    AND 
-                                        supplier_id = ?", array(
+                select("SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.total_quantity, 
+                            supplier_products0_.price, supplier0_.id AS supplier_id, 
+                            supplier0_.name, supplier0_.vatNumber, product0_.lowest_price
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (supplier supplier0_ INNER JOIN supplier_products supplier_products0_)
+                        ON
+                            (product0_.id = supplier_products0_.product_id 
+                        AND 
+                            supplier0_.id = supplier_products0_.supplier_id
+                        AND
+                            supplier_products0_.product_id = ?
+                        AND
+                            supplier_products0_.supplier_id = ?)", array(
                 $productId, $supplierId))->fetch_assoc();
         }
         catch (\mysqli_sql_exception $ex) {
@@ -67,13 +78,36 @@ class SupplierProductRepository extends GenericRepository
         return $supplierProduct;
     }
 
-    public function findAll()
+    public function findAll(int $supplierId, int $page, int $limit, array $sorts)
     {
 
         try {
-            $query = "SELECT * FROM supplier_products";
 
-            $result = $this->select($query);
+            $offset = ($limit * $page) - $limit;
+
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.total_quantity, 
+                            supplier_products0_.price, supplier0_.id AS supplier_id, 
+                            supplier0_.name, supplier0_.vatNumber, product0_.lowest_price
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (supplier supplier0_ INNER JOIN supplier_products supplier_products0_)
+                        ON
+                            (product0_.id = supplier_products0_.product_id 
+                        AND 
+                            supplier0_.id = supplier_products0_.supplier_id
+                        AND   
+                            supplier0_.id = ?)
+                        ORDER BY {$this->getOrderByString($sorts)}
+                        LIMIT ?, ?";
+
+            $result = $this->select(
+                $query,
+                array($supplierId, $offset, $limit)
+            );
+
 
             if ($result->num_rows === 0) {
                 $supplierProducts = null;
@@ -92,16 +126,27 @@ class SupplierProductRepository extends GenericRepository
         return $supplierProducts;
     }
 
-    public function findOne($productId, $supplierId)
+    public function findOne($supplierId, $productId)
     {
         try {
 
-            $query = "SELECT * FROM 
-                      supplier_products 
-                      WHERE 
-                      product_id = ? 
-                      AND 
-                      supplier_id = ?";
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.total_quantity, 
+                            supplier_products0_.price, supplier0_.id AS supplier_id, 
+                            supplier0_.name, supplier0_.vatNumber, product0_.lowest_price
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (supplier supplier0_ INNER JOIN supplier_products supplier_products0_)
+                        ON
+                            (product0_.id = supplier_products0_.product_id 
+                        AND 
+                            supplier0_.id = supplier_products0_.supplier_id
+                        AND
+                            supplier_products0_.product_id = ?
+                        AND
+                            supplier_products0_.supplier_id = ?)";
 
             $result = $this->select($query, array($productId, $supplierId));
 
@@ -118,19 +163,35 @@ class SupplierProductRepository extends GenericRepository
         return $supplierProduct;
     }
 
-    public function findByProduct(SupplierProduct $supplierProd)
+    public function findByProduct(int $productId, int $page, int $limit, array $sorts)
     {
-
-        $productId = $supplierProd->getProduct()->getId();
 
         try {
 
-            $query = "SELECT * FROM 
-                      supplier_products 
-                      WHERE 
-                      product_id = ?";
+            $offset = ($limit * $page) - $limit;
 
-            $result = $this->select($query, array($productId));
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.total_quantity, 
+                            supplier_products0_.price, supplier0_.id AS supplier_id, 
+                            supplier0_.name, supplier0_.vatNumber, product0_.lowest_price
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (supplier supplier0_ INNER JOIN supplier_products supplier_products0_)
+                        ON
+                            (product0_.id = supplier_products0_.product_id 
+                        AND 
+                            supplier0_.id = supplier_products0_.supplier_id
+                        AND
+                            product0_.id = ?)
+                        ORDER BY {$this->getOrderByString($sorts)}
+                        LIMIT ?, ?";
+
+            $result = $this->select(
+                $query,
+                array($productId, $offset, $limit)
+            );
 
             if ($result->num_rows === 0) {
                 $supplierProducts = null;
@@ -149,19 +210,38 @@ class SupplierProductRepository extends GenericRepository
         return $supplierProducts;
     }
 
-    public function findBySupplier(SupplierProduct $supplierProd)
-    {
 
-        $supplierId = $supplierProd->getSupplier()->getId();
+    public function findByParams(int $supplierId, array $options, int $page, int $limit, array $sorts)
+    {
 
         try {
 
-            $query = "SELECT * FROM 
-                      supplier_products 
-                      WHERE 
-                      supplier_id = ?";
+            $offset = ($limit * $page) - $limit;
 
-            $result = $this->select($query, array($supplierId));
+            $query = "SELECT 
+                            product0_.id AS product_id, product0_.description, 
+                            product0_.measure_unit AS unit, product0_.total_quantity, 
+                            supplier_products0_.price, supplier0_.id AS supplier_id, 
+                            supplier0_.name, supplier0_.vatNumber, product0_.lowest_price
+                        FROM
+                            product product0_
+                        INNER JOIN 
+                            (supplier supplier0_ INNER JOIN supplier_products supplier_products0_)
+                        ON
+                            (product0_.id = supplier_products0_.product_id 
+                        AND 
+                            supplier0_.id = supplier_products0_.supplier_id
+                        AND
+                            supplier0_.id = ?
+                        AND
+                            {$this->whereClauseBuilder($options)})
+                        ORDER BY {$this->getOrderByString($sorts)}
+                        LIMIT ?, ?";
+
+            $result = $this->select(
+                $query,
+                array($supplierId, $offset, $limit)
+            );
 
             if ($result->num_rows === 0) {
                 $supplierProducts = null;
@@ -179,6 +259,7 @@ class SupplierProductRepository extends GenericRepository
 
         return $supplierProducts;
     }
+
 
     public function update($object)
     {
@@ -302,6 +383,16 @@ class SupplierProductRepository extends GenericRepository
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }
+    }
+
+    public function getTotal(int $id): int
+    {
+        return $this->getTotalQuantity("supplier_products", "supplier", $id);
+    }
+
+    public function getTotalByProduct(int $id): int
+    {
+        return $this->getTotalQuantity("supplier_products", "product", $id);
     }
 
 }

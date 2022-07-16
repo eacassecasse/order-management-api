@@ -58,9 +58,7 @@ return static function (ContainerConfigurator $container) {
 
     $container->services()
         ->set('serializer', Serializer::class)
-            ->public()
             ->args([[], []])
-            ->tag('container.private', ['package' => 'symfony/framework-bundle', 'version' => '5.2'])
 
         ->alias(SerializerInterface::class, 'serializer')
         ->alias(NormalizerInterface::class, 'serializer')
@@ -100,7 +98,7 @@ return static function (ContainerConfigurator $container) {
 
         ->set('serializer.normalizer.json_serializable', JsonSerializableNormalizer::class)
             ->args([null, null])
-            ->tag('serializer.normalizer', ['priority' => -900])
+            ->tag('serializer.normalizer', ['priority' => -950])
 
         ->set('serializer.normalizer.problem', ProblemNormalizer::class)
             ->args([param('kernel.debug')])

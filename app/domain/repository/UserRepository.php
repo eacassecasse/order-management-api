@@ -63,13 +63,26 @@ class UserRepository extends GenericRepository
         return $user;
     }
 
-    public function findAll()
+    public function findAll(int $page, int $limit, array $sorts)
     {
 
         try {
-            $query = "SELECT * FROM user";
 
-            $result = $this->select($query);
+            $offset = ($limit * $page) - $limit;
+
+            $query = "SELECT 
+                            * 
+                        FROM 
+                            user 
+                        ORDER BY 
+                            {$this->getOrderByString($sorts)} 
+                        LIMIT ?,?";
+
+            $result = $this->select(
+                $query,
+                array($offset, $limit)
+            );
+
 
             if ($result->num_rows === 0) {
                 $users = null;

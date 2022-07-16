@@ -65,16 +65,4 @@ class BaseController
 
         return $input;
     }
-
-    /**
-     * Validates Email input
-     */
-    protected function validEmail($input)
-    {
-        $input = filter_var($input, FILTER_SANITIZE_EMAIL);
-        $input = filter_var($input, FILTER_VALIDATE_EMAIL);
-
-        return $input;
-    }
-
 }

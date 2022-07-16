@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace Pagerfanta;
 
@@ -15,6 +15,7 @@ use Pagerfanta\Exception\OutOfRangeCurrentPageException;
  * @implements PagerfantaInterface<T>
  */
 class Pagerfanta implements PagerfantaInterface, \JsonSerializable
+
 {
     /**
      * @var AdapterInterface<T>
@@ -60,9 +61,6 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
     /**
      * @param AdapterInterface<T> $adapter
      *
-     * @phpstan-param positive-int $currentPage
-     * @phpstan-param positive-int $maxPerPage
-     *
      * @return self<T>
      */
     public static function createForCurrentPageWithMaxPerPage(AdapterInterface $adapter, int $currentPage, int $maxPerPage): self
@@ -74,6 +72,7 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
         return $pagerfanta;
     }
 
+
     /**
      * @return AdapterInterface<T>
      *
@@ -81,7 +80,7 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
      */
     public function getAdapter(): AdapterInterface
     {
-        trigger_deprecation('pagerfanta/pagerfanta', '3.2', 'Retrieving the %s from "%s" implementations is deprecated and will be removed in 4.0.', AdapterInterface::class, PagerfantaInterface::class);
+        trigger_deprecation('pagerfanta/pagerfanta', '3.2', 'Retrieving the %s from "%s" implementations is deprecated and will be removed in 4.0.', AdapterInterface::class , PagerfantaInterface::class);
 
         return $this->adapter;
     }
@@ -114,8 +113,6 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
     }
 
     /**
-     * @phpstan-param positive-int $maxPerPage
-     *
      * @return $this<T>
      *
      * @throws LessThan1MaxPerPageException if the page is less than 1
@@ -131,17 +128,12 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
         return $this;
     }
 
-    /**
-     * @phpstan-param positive-int $maxPerPage
-     */
     private function filterMaxPerPage(int $maxPerPage): void
     {
         $this->checkMaxPerPage($maxPerPage);
     }
 
     /**
-     * @phpstan-param positive-int $maxPerPage
-     *
      * @throws LessThan1MaxPerPageException if the page is less than 1
      */
     private function checkMaxPerPage(int $maxPerPage): void
@@ -165,8 +157,6 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
     }
 
     /**
-     * @phpstan-param positive-int $currentPage
-     *
      * @return $this<T>
      *
      * @throws LessThan1CurrentPageException  if the current page is less than 1
@@ -181,8 +171,6 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
     }
 
     /**
-     * @phpstan-param positive-int $currentPage
-     *
      * @phpstan-return positive-int
      */
     private function filterCurrentPage(int $currentPage): int
@@ -193,8 +181,6 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
     }
 
     /**
-     * @phpstan-param positive-int $currentPage
-     *
      * @throws LessThan1CurrentPageException if the current page is less than 1
      */
     private function checkCurrentPage(int $currentPage): void
@@ -205,8 +191,6 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
     }
 
     /**
-     * @phpstan-param positive-int $currentPage
-     *
      * @phpstan-return positive-int
      */
     private function filterOutOfRangeCurrentPage(int $currentPage): int
@@ -218,25 +202,17 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
         return $currentPage;
     }
 
-    /**
-     * @phpstan-param positive-int $currentPage
-     */
     private function notAllowedCurrentPageOutOfRange(int $currentPage): bool
     {
         return !$this->getAllowOutOfRangePages() && $this->currentPageOutOfRange($currentPage);
     }
 
-    /**
-     * @phpstan-param positive-int $currentPage
-     */
     private function currentPageOutOfRange(int $currentPage): bool
     {
         return $currentPage > 1 && $currentPage > $this->getNbPages();
     }
 
     /**
-     * @phpstan-param positive-int $currentPage
-     *
      * @phpstan-return positive-int
      *
      * @throws OutOfRangeCurrentPageException if the page should not be normalized
@@ -345,7 +321,7 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
      */
     private function calculateNbPages(): int
     {
-        return (int) ceil($this->getNbResults() / $this->getMaxPerPage());
+        return (int)ceil($this->getNbResults() / $this->getMaxPerPage());
     }
 
     /**
@@ -357,8 +333,6 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
     }
 
     /**
-     * @phpstan-param positive-int $maxNbPages
-     *
      * @return $this<T>
      *
      * @throws LessThan1MaxPagesException if the max number of pages is less than 1
@@ -483,6 +457,6 @@ class Pagerfanta implements PagerfantaInterface, \JsonSerializable
             throw new OutOfBoundsException(sprintf('Item requested at position %d, but there are only %d items.', $position, $this->getNbResults()));
         }
 
-        return (int) ceil($position / $this->getMaxPerPage());
+        return (int)ceil($position / $this->getMaxPerPage());
     }
 }

@@ -45,20 +45,24 @@ class SupplierService
         $supplier->setName($inputModel->getName());
         $supplier->setVatNumber($inputModel->getVatNumber());
 
-        $found = Utilities::toSupplier(
-            $this->repository->findByVatNumber(
-            $supplier->getVatNumber()
-        )
-        );
+        $options = array('vatNumber' => $supplier->getVatNumber());
 
-        if (($found) && ($found->__equals($supplier))) {
-            throw new BusinessException('Supplier Already exists');
+        $founds = Utilities::toSupplierCollection(
+            $this->repository->findByParams(
+            $options, 1, 5000, array(["id", "asc"])));
+
+        if ($founds) {
+            foreach ($founds as $found) {
+                if (($found) && ($found->__equals($supplier))) {
+                    throw new BusinessException('Supplier Already exists');
+                }
+            }
         }
 
         return Utilities::toSupplier($this->repository->create($supplier));
     }
 
-    public function findOne(?int $id): Supplier
+    public function findOne(?int $id): ?Supplier
     {
 
         $supplier = Utilities::toSupplier($this->repository->findOne($id));
@@ -70,37 +74,66 @@ class SupplierService
         return $supplier;
     }
 
-    public function findByVatNumber(?int $vatNumber): ?Supplier
-    {
-
-        $supplier = Utilities::toSupplier(
-            $this->repository->findByVatNumber($vatNumber)
-        );
-
-        if (!($supplier)) {
-            throw new EntityNotFoundException('Supplier Not Found');
-        }
-
-        return $supplier;
-    }
-
-    public function findByName(?string $name): ?Supplier
-    {
-
-        $supplier = Utilities::toSupplier($this->repository->findByName($name));
-
-        if (!($supplier)) {
-            throw new EntityNotFoundException('Supplier Not Found');
-        }
-
-        return $supplier;
-    }
-
-    public function findAll(): ?array
+    public function findByVatNumber(
+        array $options,
+        int $page,
+        int $limit,
+        array $sorts): ?array
     {
 
         $suppliers = Utilities::toSupplierCollection(
-            $this->repository->findAll()
+            $this->repository->findByParams($options, $page, $limit, $sorts)
+        );
+
+        if (!($suppliers)) {
+            throw new EntityNotFoundException('Supplier Not Found');
+        }
+
+        return $suppliers;
+    }
+
+    public function findByName(
+        array $options,
+        int $page,
+        int $limit,
+        array $sorts): ?array
+    {
+
+        $suppliers = Utilities::toSupplierCollection(
+            $this->repository->findByParams($options, $page, $limit, $sorts)
+        );
+
+        if (!($suppliers)) {
+            throw new EntityNotFoundException('Supplier Not Found');
+        }
+
+        return $suppliers;
+    }
+
+    public function findByNameAndVatNumber(
+        array $options,
+        int $page,
+        int $limit,
+        array $sorts): ?array
+    {
+
+        $suppliers = Utilities::toSupplierCollection($this->repository->findByParams($options, $page, $limit, $sorts));
+
+        if (!($suppliers)) {
+            throw new EntityNotFoundException('Supplier Not Found');
+        }
+
+        return $suppliers;
+    }
+
+    public function findAll(
+        int $page,
+        int $limit,
+        array $sorts): ?array
+    {
+
+        $suppliers = Utilities::toSupplierCollection(
+            $this->repository->findAll($page, $limit, $sorts)
         );
 
         if (!($suppliers)) {
@@ -137,6 +170,11 @@ class SupplierService
         return $this->repository->delete($supplier->getId());
     }
 
+    public function getSuppliersExistance()
+    {
+        return $this->repository->getTotal();
+    }
+
     public function add(?SupplierProductInputModel $inputModel): ?SupplierProduct
     {
 
@@ -170,17 +208,10 @@ class SupplierService
         $created = Utilities::toSupplierProduct(
             $this->supplierProductRepository->create($supplierProduct));
 
-        if ($created) {
-            if ($created instanceof SupplierProduct) {
-                $created->setProduct($this->findProduct($created->getProduct()->getId()));
-                $created->setSupplier($this->findOne($created->getSupplier()->getId()));
-            }
-        }
-
         return $created;
     }
 
-    public function findOneProduct(?int $productId, ?int $supplierId): ?SupplierProduct
+    public function viewProduct(?int $productId, ?int $supplierId): ?SupplierProduct
     {
 
         $supplierProduct = Utilities::toSupplierProduct(
@@ -192,25 +223,20 @@ class SupplierService
             throw new EntityNotFoundException('Supplier does not supply this Product');
         }
 
-        $product = $this->findProduct($supplierProduct->getProduct()->getId());
-        $supplier = $this->findOne($supplierProduct->getSupplier()->getId());
-
-        $supplierProduct->setProduct($product);
-        $supplierProduct->setSupplier($supplier);
-
         return $supplierProduct;
     }
 
-    public function listProducts(?int $supplierId): ?array
+    public function listAll(
+        int $supplierId,
+        int $page,
+        int $limit,
+        array $sorts): ?array
     {
 
         $supplier = $this->findOne($supplierId);
 
-        $supplierProduct = new SupplierProduct();
-        $supplierProduct->setSupplier($supplier);
-
         $supplierProducts = Utilities::toSupplierProductCollection(
-            $this->supplierProductRepository->findBySupplier($supplierProduct)
+            $this->supplierProductRepository->findAll($supplier->getId(), $page, $limit, $sorts)
         );
 
         if (!($supplierProducts)) {
@@ -218,15 +244,26 @@ class SupplierService
                 . 'this Supplier');
         }
 
-        foreach ($supplierProducts as $supplierProd) {
-            if ($supplierProd instanceof SupplierProduct) {
-                $supplierProd->setProduct(
-                    $this->findProduct($supplierProd->getProduct()->getId())
-                );
-                $supplierProd->setSupplier(
-                    $this->findOne($supplierProd->getSupplier()->getId())
-                );
-            }
+        return $supplierProducts;
+    }
+
+    public function listByPrice(
+        int $supplierId,
+        array $options,
+        int $page,
+        int $limit,
+        array $sorts): ?array
+    {
+
+        $supplier = $this->findOne($supplierId);
+
+        $supplierProducts = Utilities::toSupplierProductCollection(
+            $this->supplierProductRepository->findByParams($supplier->getId(), $options, $page, $limit, $sorts)
+        );
+
+        if (!($supplierProducts)) {
+            throw new EntityNotFoundException('Could not find any product of '
+                . 'this Supplier');
         }
 
         return $supplierProducts;
@@ -269,48 +306,28 @@ class SupplierService
             $this->supplierProductRepository->update($found)
         );
 
-        if ($updated) {
-            if ($updated instanceof SupplierProduct) {
-                $updated->setProduct(
-                    $this->findProduct(
-                    $updated->getProduct()->getId()
-                )
-                );
-
-                $updated->setSupplier(
-                    $this->findOne(
-                    $updated->getSupplier()->getId()
-                )
-                );
-            }
-        }
-
         return $updated;
     }
 
-    public function remove(?SupplierProductInputModel $inputModel): ?bool
+    public function remove(int $supplierId, int $productId): ?bool
     {
-
-        $supplierProduct = new SupplierProduct();
-
-        $product = new Product();
-        $product->setId($inputModel->getProduct()->getId());
-
-        $supplier = new Supplier();
-        $supplier->setId($inputModel->getSupplier()->getId());
-
-        $supplierProduct->setProduct($product);
-        $supplierProduct->setSupplier($supplier);
 
         $found = Utilities::toSupplierProduct(
             $this->supplierProductRepository->findOne(
-            $supplierProduct->getProduct()->
-            getId(), $supplierProduct->getSupplier()->getId()
-        )
+            $supplierId, $productId)
         );
+
+        if (!$found) {
+            throw new EntityNotFoundException("This product is not associated with this Supplier");
+        }
 
         return $this->supplierProductRepository->deleteOne(
             $found->getProduct()->getId(), $found->getSupplier()->getId());
+    }
+
+    public function getSupplierProductsExistance(int $id)
+    {
+        return $this->supplierProductRepository->getTotal($id);
     }
 
     private function findProduct(?int $id): Product
