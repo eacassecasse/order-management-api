@@ -71,10 +71,10 @@ class UserService
         return $user;
     }
 
-    public function findAll(): ?array
+    public function findAll(int $page, int $limit, array $sorts): ?array
     {
 
-        $users = Utilities::toUserCollection($this->repository->findAll());
+        $users = Utilities::toUserCollection($this->repository->findAll($page, $limit, $sorts));
 
         if (!($users)) {
             throw new EntityNotFoundException('Could not find any User');
