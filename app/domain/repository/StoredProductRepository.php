@@ -308,54 +308,6 @@ class StoredProductRepository extends GenericRepository
         return $storedProduct;
     }
 
-    public function deletebyProduct($productId)
-    {
-
-        $connection = $this->connect();
-        $connection->autocommit(false);
-        $connection->begin_transaction();
-
-        try {
-            $query = "DELETE FROM stored_products WHERE product_id = ?";
-
-            $statement = $this->executeStatement($query, array($productId));
-
-            if ($statement->affected_rows === 0) {
-                return false;
-            }
-
-            return true;
-        }
-        catch (\mysqli_sql_exception $ex) {
-            $connection->rollback();
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-    }
-
-    public function deletebyStorage($storageId)
-    {
-
-        $connection = $this->connect();
-        $connection->autocommit(false);
-        $connection->begin_transaction();
-
-        try {
-            $query = "DELETE FROM stored_products WHERE storage_id = ?";
-
-            $statement = $this->executeStatement($query, array($storageId));
-
-            if ($statement->affected_rows === 0) {
-                return false;
-            }
-
-            return true;
-        }
-        catch (\mysqli_sql_exception $ex) {
-            $connection->rollback();
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-    }
-
     public function deleteOne($storageId, $productId)
     {
 

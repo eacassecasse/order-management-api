@@ -13,7 +13,6 @@ $driver->report_mode = \MYSQLI_REPORT_ERROR | \MYSQLI_REPORT_STRICT;
 class SupplierProductRepository extends GenericRepository
 {
 
-    //put your code here
     public function __construct()
     {
         parent::__construct();
@@ -307,54 +306,6 @@ class SupplierProductRepository extends GenericRepository
         }
 
         return $supplierProduct;
-    }
-
-    public function deletebyProduct($productId)
-    {
-
-        $connection = $this->connect();
-        $connection->autocommit(false);
-        $connection->begin_transaction();
-
-        try {
-            $query = "DELETE FROM supplier_products WHERE product_id = ?";
-
-            $statement = $this->executeStatement($query, array($productId));
-
-            if ($statement->affected_rows === 0) {
-                return false;
-            }
-
-            return true;
-        }
-        catch (\mysqli_sql_exception $ex) {
-            $connection->rollback();
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-    }
-
-    public function deletebySupplier($supplierId)
-    {
-
-        $connection = $this->connect();
-        $connection->autocommit(false);
-        $connection->begin_transaction();
-
-        try {
-            $query = "DELETE FROM supplier_products WHERE supplier_id = ?";
-
-            $statement = $this->executeStatement($query, array($supplierId));
-
-            if ($statement->affected_rows === 0) {
-                return false;
-            }
-
-            return true;
-        }
-        catch (\mysqli_sql_exception $ex) {
-            $connection->rollback();
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
     }
 
     public function deleteOne($productId, $supplierId)
