@@ -64,8 +64,7 @@ class SupplierProduct extends ObjectModel
         }
 
         return $object->getProduct()->getId() == $this->getProduct()->getId() &&
-            $object->getSupplier()->getId() == $this->getSupplier()->getId() &&
-            $object->getPrice() == $this->getPrice();
+            $object->getSupplier()->getId() == $this->getSupplier()->getId();
     }
 
 }

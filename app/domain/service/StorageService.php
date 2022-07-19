@@ -79,7 +79,7 @@ class StorageService
             $this->repository->findByParams($options, $page, $limit, $sorts));
 
         if (!($storages)) {
-            throw new EntityNotFoundException('Could not find any Storage');
+            throw new EntityNotFoundException('Could not find any storage with the given parameters');
         }
 
         return $storages;
@@ -92,7 +92,7 @@ class StorageService
             $this->repository->findByParams($options, $page, $limit, $sorts));
 
         if (!($storages)) {
-            throw new EntityNotFoundException('Storage Not Found');
+            throw new EntityNotFoundException('Could not find any storage with the given parameters');
         }
 
         return $storages;
@@ -109,7 +109,7 @@ class StorageService
             $this->repository->findByParams($options, $page, $limit, $sorts));
 
         if (!($storages)) {
-            throw new EntityNotFoundException('Storage Not Found');
+            throw new EntityNotFoundException('Could not find any storage with the given parameters');
         }
 
         return $storages;
@@ -124,7 +124,7 @@ class StorageService
         $storages = Utilities::toStorageCollection($this->repository->findAll($page, $limit, $sorts));
 
         if (!($storages)) {
-            throw new EntityNotFoundException('Could not find any Storage');
+            throw new EntityNotFoundException('Could not find any storage');
         }
 
         return $storages;
@@ -144,7 +144,7 @@ class StorageService
             $this->repository->update($found));
 
         if (!($updatedStorage)) {
-            throw new BusinessException('Could not proceed with update.');
+            throw new BusinessException('Could not proceed with update');
         }
 
         return $updatedStorage;
@@ -166,29 +166,23 @@ class StorageService
     public function add(?StoredProductInputModel $inputModel): ?StoredProduct
     {
 
-        $prod = new Product();
-        $prod->setId($inputModel->getProduct()->getId());
+        $product = $this->findProduct($inputModel->getProduct()->getId());
 
-        $stor = new Storage();
-        $stor->setId($inputModel->getStorage()->getId());
+        $storage = $this->findOne($inputModel->getStorage()->getId());
 
         $storedProduct = new StoredProduct();
-        $storedProduct->setProduct($prod);
-        $storedProduct->setStorage($stor);
+        $storedProduct->setProduct($product);
+        $storedProduct->setStorage($storage);
         $storedProduct->setQuantity($inputModel->getQuantity());
 
         $found = Utilities::toStoredProduct(
             $this->storedProductRepository->findOne(
-            $storedProduct->getProduct()->getId(), $storedProduct->getStorage()->getId())
+            $storage->getId(), $product->getId())
         );
 
         if (($found) && ($found->__equals($storedProduct))) {
-            throw new BusinessException('Product already exists on this '
-                . 'Storage');
+            throw new BusinessException('This product has already been added to the given storage');
         }
-
-        $product = $this->findProduct($storedProduct->getProduct()->getId());
-        $storage = $this->findOne($storedProduct->getStorage()->getId());
 
         $storedProduct->setProduct($product);
         $storedProduct->setStorage($storage);
@@ -225,8 +219,8 @@ class StorageService
         );
 
         if (!($storedProducts)) {
-            throw new EntityNotFoundException('Could not find any product on '
-                . 'this Storage');
+            throw new EntityNotFoundException('This storage is empty! 
+            Could not find any product in this storage');
         }
 
         return $storedProducts;
@@ -248,8 +242,8 @@ class StorageService
         );
 
         if (!($storedProducts)) {
-            throw new EntityNotFoundException('Could not find any product on '
-                . 'this Storage');
+            throw new EntityNotFoundException('Could not find any product on this storage 
+            with the given parameters');
         }
 
         return $storedProducts;
@@ -275,16 +269,22 @@ class StorageService
         );
 
         if (!($found)) {
-            throw new EntityNotFoundException('This product is not stored in given store.');
+            throw new EntityNotFoundException('This product is not stored in given storage.');
         }
 
         $found->setProduct($product);
         $found->setStorage($storage);
         $found->setQuantity($storedProduct->getQuantity());
 
-        return Utilities::toStoredProduct(
+        $updated = Utilities::toStoredProduct(
             $this->storedProductRepository->update($found)
         );
+
+        if (!$updated) {
+            throw new BusinessException("Could not proceed with update");
+        }
+
+        return $updated;
     }
 
     public function remove(int $storageId, int $productId): ?bool

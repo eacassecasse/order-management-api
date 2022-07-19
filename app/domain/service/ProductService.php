@@ -90,7 +90,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Product Not Found');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -105,7 +105,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -119,7 +119,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -132,7 +132,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -146,7 +146,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -164,7 +164,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -182,7 +182,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -200,7 +200,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -218,7 +218,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -236,7 +236,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -254,7 +254,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -272,7 +272,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -290,7 +290,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -308,7 +308,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -326,7 +326,7 @@ class ProductService
         );
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any product with the given parameters.');
+            throw new EntityNotFoundException('Could not find any product with the given parameters');
         }
 
         return $products;
@@ -338,7 +338,7 @@ class ProductService
         $products = Utilities::toProductCollection($this->repository->findAll($page, $limit, $sorts));
 
         if (!($products)) {
-            throw new EntityNotFoundException('Could not find any Product');
+            throw new EntityNotFoundException('Could not find any product');
         }
 
         return $products;
@@ -396,7 +396,7 @@ class ProductService
         if ($founds) {
             foreach ($founds as $found) {
                 if (($found) && ($found->__equals($validity))) {
-                    throw new BusinessException('Validity already exists for this Product');
+                    throw new BusinessException('This validity has already been added to the given product');
                 }
             }
         }
@@ -437,8 +437,8 @@ class ProductService
         );
 
         if (!($validities)) {
-            throw new EntityNotFoundException('Could not find any validity with '
-                . 'this expiration date');
+            throw new EntityNotFoundException('Could not find 
+            any validity with the given parameters added to this product');
         }
 
         return $validities;
@@ -458,8 +458,8 @@ class ProductService
         ));
 
         if (!($validities)) {
-            throw new EntityNotFoundException('Could not find any validity with '
-                . 'this quantity.');
+            throw new EntityNotFoundException('Could not find any validity 
+            with the given parameters added to this product');
         }
 
         return $validities;
@@ -480,8 +480,8 @@ class ProductService
         );
 
         if (!($validities)) {
-            throw new EntityNotFoundException('Could not find any validity with '
-                . 'this expiration date or quantity.');
+            throw new EntityNotFoundException('Could not find 
+            any validity with the given parameters added to this product');
         }
 
         return $validities;
@@ -501,8 +501,8 @@ class ProductService
         );
 
         if (!($validities)) {
-            throw new EntityNotFoundException('Could not find any validity '
-                . 'for this Product');
+            throw new EntityNotFoundException('Could not find 
+            any validity added to this product');
         }
 
         return $validities;
@@ -512,10 +512,7 @@ class ProductService
     {
         $productId = $inputModel->getProduct()->getId();
 
-        $found = Utilities::toValidity(
-            $this->validityRepository->findOne(
-            $productId, $validityId)
-        );
+        $found = $this->viewValidity($productId, $validityId);
 
         $found->setProduct(
             $this->findOne($productId)
@@ -525,19 +522,17 @@ class ProductService
 
         $updated = Utilities::toValidity($this->validityRepository->update($found));
 
+        if (!$updated) {
+            throw new BusinessException("Was not possible to processed with update");
+        }
+
         return $updated;
     }
 
     public function remove(?int $productId, ?int $validityId): ?bool
     {
 
-        $found = Utilities::toValidity(
-            $this->validityRepository->findOne($productId, $validityId)
-        );
-
-        if (!($found)) {
-            throw new EntityNotFoundException('Validity Not Found');
-        }
+        $found = $this->viewValidity($productId, $validityId);
 
         return $this->validityRepository->delete(
             $found->getId());
@@ -567,6 +562,10 @@ class ProductService
             foreach ($records as $record) {
                 array_push($suppliers, $record->getSupplier());
             }
+        }
+        else {
+            throw new EntityNotFoundException('Could not find 
+            any supplier of the given product');
         }
 
         return $suppliers;
@@ -628,6 +627,10 @@ class ProductService
             foreach ($records as $record) {
                 array_push($storages, $record->getStorage());
             }
+        }
+        else {
+            throw new EntityNotFoundException('Could not find 
+            any storage that contains this product');
         }
 
         return $storages;

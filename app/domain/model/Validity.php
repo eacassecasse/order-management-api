@@ -74,7 +74,6 @@ class Validity extends ObjectModel
         }
 
         return $object->getExpirationDate() == $this->getExpirationDate() &&
-            $object->getQuantity() == $this->getQuantity() &&
             $object->getProduct()->getId() == $this->getProduct()->getId();
     }
 
