@@ -5,10 +5,17 @@
     <a href="https://github.com/eacassecasse/api.mansto.com/graphs/contributors" alt="Contributors">
         <img src="https://img.shields.io/github/contributors/badges/shields" />
     </a>
-    <a href="https://github.com/eacassecasse/api.mansto.com/graphs/forks" alt="Contributors">
+    <a href="https://github.com/eacassecasse/api.mansto.com/network/members" alt="forks">
         <img src="https://img.shields.io/github/forks/badges/shields" />
     </a>
+    <a href="https://github.com/eacassecasse/api.mansto.com/stars" alt="forks">
+        <img src="https://img.shields.io/github/stars/badges/shields" />
+    </a>
+    
 </p>
+
+[![GitHub issues by-label](https://img.shields.io/github/issues/badges/shields/good%20first%20issue)](https://github.com/eacassecasse/api.mansto.com/issues)
+
 
 ## API Documentation
 
