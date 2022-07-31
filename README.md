@@ -1,3 +1,15 @@
+<p align="justify">
+    <a href="https://google.com" alt="project status">
+        <img src="https://img.shields.io/badge/status-In%20development-green" />
+    </a>
+    <a href="https://github.com/eacassecasse/api.mansto.com/graphs/contributors" alt="Contributors">
+        <img src="https://img.shields.io/github/contributors/badges/shields" />
+    </a>
+    <a href="https://github.com/eacassecasse/api.mansto.com/graphs/forks" alt="Contributors">
+        <img src="https://img.shields.io/github/forks/badges/shields" />
+    </a>
+</p>
+
 ## API Documentation
 
 
