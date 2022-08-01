@@ -11,7 +11,7 @@
     <a href="https://github.com/eacassecasse/api.mansto.com/stars" alt="stars">
         <img src="https://img.shields.io/github/stars/eacassecasse/api.mansto.com" />
     </a>
-    <a href="https://github.com/eacassecasse/api.mansto.com/LICENSE" alt="license">
+    <a href="https://github.com/eacassecasse/api.mansto.com/blob/main/LICENSE" alt="license">
         <img src="https://img.shields.io/badge/License-MIT-orange" />
     </a>
 </p>
