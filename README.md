@@ -17,7 +17,7 @@
 </p>
 
 [![GitHub issues by-label](https://img.shields.io/github/issues/eacassecasse/api.mansto.com/good%20first%20issue)](https://github.com/eacassecasse/api.mansto.com/issues)
-![API version](https://img.shields.io/badge/Version-1.0.0-orange)
+![API version](https://img.shields.io/badge/Version-1.0.0-blue)
 
 
 ## API Documentation
