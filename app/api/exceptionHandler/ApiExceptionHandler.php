@@ -11,48 +11,52 @@ use App\domain\exception\MYSQLTransactionException;
 interface Problem
 {
 
-    public function getTitle();
+    public function getType();
 
+    public function getDescription();
     public function getDatetime();
 
-    public function getStatus();
+    public function getCode();
 
-    public function setTitle($title);
+    public function setType($type);
+
+    public function setDescription($description);
 
     public function setDatetime($datetime);
 
-    public function setStatus($status);
+    public function setCode($code);
 }
 
 $problem = new class implements Problem, \JsonSerializable {
 
-    private $title;
+    private $type;
+    private $description;
     private $datetime;
-    private $status;
+    private $code;
 
     public function __construct()
     {
 
     }
 
-    public function getTitle()
+    public function setType($type)
     {
-        return $this->title;
+        $this->type = $type;
     }
 
-    public function getDatetime()
+    public function getType()
     {
-        return $this->datetime;
+        return $this->type;
     }
 
-    public function getStatus()
+    public function setDescription($description)
     {
-        return $this->status;
+        $this->description = $description;
     }
 
-    public function setTitle($title)
+    public function getDescription()
     {
-        $this->title = $title;
+        return $this->description;
     }
 
     public function setDatetime($datetime)
@@ -60,19 +64,31 @@ $problem = new class implements Problem, \JsonSerializable {
         $this->datetime = $datetime;
     }
 
-    public function setStatus($status)
+    public function getDatetime()
     {
-        $this->status = $status;
+        return $this->datetime;
     }
 
-    public function jsonSerialize()
+    public function setCode($code)
+    {
+        $this->code = $code;
+    }
+
+    public function getCode()
+    {
+        return $this->code;
+    }
+
+    public function jsonSerialize(): mixed
     {
         return [
-        'status' => $this->getStatus(),
-        'title' => $this->getTitle(),
-        'date&time' => $this->getDatetime()
+        'code' => $this->code,
+        'type' => $this->type,
+        'description' => $this->description,
+        'date&time' => $this->datetime->format('d-m-Y H:i:s TZ')
         ];
     }
+
 };
 
 $GLOBALS['problem'] = $problem;
@@ -84,9 +100,10 @@ class ApiExceptionHandler
         $problem = $GLOBALS['problem'];
 
         if ($problem instanceof Problem) {
-            $problem->setTitle($entityNotFoundException->getMessage());
+            $problem->setType("resource_not_found");
+            $problem->setDescription($entityNotFoundException->getMessage());
             $problem->setDatetime(new \DateTime());
-            $problem->setStatus(404);
+            $problem->setCode(404);
         }
 
         return $problem;
@@ -99,9 +116,10 @@ class ApiExceptionHandler
         $problem = $GLOBALS['problem'];
 
         if ($problem instanceof Problem) {
-            $problem->setTitle($mysqlTransactionException->getMessage());
+            $problem->setType("database_fetch_failure");
+            $problem->setDescription($mysqlTransactionException->getMessage());
             $problem->setDatetime(new \DateTime());
-            $problem->setStatus(400);
+            $problem->setCode(418);
         }
 
         return $problem;
@@ -113,9 +131,10 @@ class ApiExceptionHandler
         $problem = $GLOBALS['problem'];
 
         if ($problem instanceof Problem) {
-            $problem->setTitle($connectionException->getMessage());
+            $problem->setType("request_failed");
+            $problem->setDescription($connectionException->getMessage());
             $problem->setDatetime(new \DateTime());
-            $problem->setStatus(500);
+            $problem->setCode(500);
         }
 
         return $problem;
@@ -127,9 +146,9 @@ class ApiExceptionHandler
         $problem = $GLOBALS['problem'];
 
         if ($problem instanceof Problem) {
-            $problem->setTitle($businessException->getMessage());
+            $problem->setDescription($businessException->getMessage());
             $problem->setDatetime(new \DateTime());
-            $problem->setStatus(400);
+            $problem->setCode(400);
         }
 
         return $problem;
@@ -140,9 +159,10 @@ class ApiExceptionHandler
         $problem = $GLOBALS['problem'];
 
         if ($problem instanceof Problem) {
-            $problem->setTitle($message . ' {' . $method . '}');
+            $problem->setType("method_not_supported");
+            $problem->setDescription($message . ' {' . $method . '}');
             $problem->setDatetime(new \DateTime());
-            $problem->setStatus(405);
+            $problem->setCode(405);
         }
 
         return $problem;

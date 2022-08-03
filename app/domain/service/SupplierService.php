@@ -212,7 +212,7 @@ class SupplierService
 
     public function viewProduct(?int $productId, ?int $supplierId): ?SupplierProduct
     {
-        $this->findOne($supplier);
+        $this->findOne($supplierId);
         $this->findProduct($productId);
 
         $supplierProduct = Utilities::toSupplierProduct(

@@ -1,5 +1,6 @@
 ## API Documentation
 
+
 Welcome to the mansto API Documentation. Using the instructions and interactive code examples below you will be able to start making API requests in a matter of minutes. If you have an account already and prefer to skip our detailed documentation, you can also jump to our [3-Step Quickstart Guide](http://api.mansto.com/quickstart) right away.
 
 The mansto API was built to deliver products data for any application and use case, from supplier prices to storages quantity all the way, supporting all major programming languages. Our straightfoward API design will make it easy to use the API - continue reading below to get started.
@@ -44,11 +45,7 @@ Whenever your API request fails, the mansto API will return an error object in l
         "code": 404,
         "type": "resource_not_found",
         "description": "The requested resource does not exist",
-        "date&time": {
-            "date": "2022-07-17 22:33:41.941884",
-            "timezone_type": 3,
-            "timezone": "Europe/Berlin"
-        }
+        "date&time": "2022-07-17 22:33:41 CEST7200"
     }
 }
 ```
@@ -69,6 +66,7 @@ Whenever your API request fails, the mansto API will return an error object in l
 |403        |https_access_restricted             |The user's current subscription plan does not support HTTPS. |
 |403        |inactive_user                       |User account is inactive or blocked.                   |
 |404        |resource_not_found                  |User has requested a resource which does not exist.    |
+|405        |method_not_supported |The method requested is not supported|
 |418        |database_fetch_failure              |Database query has failed.                             |
 |500        |request_failed                      |API request has failed.                                |
 |602        |no_results                          |The API request did not return any results.            |

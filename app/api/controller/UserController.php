@@ -142,22 +142,9 @@ class UserController extends BaseController
                         Utilities::toUserOutputModel($this->service->findOne($id)), 'json');
                 }
                 else {
-                    $query = parse_url(filter_input(INPUT_SERVER, 'REQUEST_URI'), PHP_URL_QUERY);
-                    $toArrayQuery = parse_str($query, $arrayQuery);
-
-                    if (count($arrayQuery)) {
-                        if (isset($arrayQuery['email'])) {
-                            $email = filter_var($this->clean($arrayQuery['email']), FILTER_VALIDATE_EMAIL);
-
-                            $outputModel = $this->hateoas->serialize(
-                                Utilities::toUserOutputModel(
-                                $this->service->findEmail($email)), 'json');
-
-                        }
-                    }
-                    else {
+                    
                         throw new BusinessException('Please provide valid value for id [Not Null and Not Blank or Greater than 0].');
-                    }
+                    
                 }
             }
             catch (ConnectionException $connectionException) {
@@ -202,7 +189,7 @@ class UserController extends BaseController
      * Get a list of users
      */
 
-    public function find()
+    public function find($page, $limit, $sorts)
     {
         $errorMessage = '';
         $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
@@ -211,7 +198,7 @@ class UserController extends BaseController
             try {
 
                 $adapter = new ArrayAdapter(
-                    Utilities::toUserOutputCollectionModel($this->service->findAll()));
+                    Utilities::toUserOutputCollectionModel($this->service->findAll($page, $limit, $sorts )));
 
                 $pager = new Pagerfanta($adapter);
 

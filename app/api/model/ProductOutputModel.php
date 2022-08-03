@@ -82,7 +82,7 @@ class ProductOutputModel implements \JsonSerializable
         $this->totalQuantity = $totalQuantity;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
         return [
             'id' => $this->getId(),
