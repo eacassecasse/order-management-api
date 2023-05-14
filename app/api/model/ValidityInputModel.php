@@ -1,15 +1,15 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 use App\api\model\ProductIdInputModel;
 
 class ValidityInputModel
 {
 
-    private $expirationDate;
-    private $quantity;
-    private $product;
+    private string $expirationDate;
+    private float $quantity;
+    private ProductIdInputModel $product;
 
     public function __construct()
     {

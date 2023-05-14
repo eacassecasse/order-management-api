@@ -1,6 +1,6 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 use App\api\model\ProductIdInputModel;
 use App\api\model\StorageIdInputModel;
@@ -8,9 +8,9 @@ use App\api\model\StorageIdInputModel;
 class StoredProductInputModel
 {
 
-    private $storage;
-    private $product;
-    private $quantity;
+    private StorageIdInputModel $storage;
+    private ProductIdInputModel $product;
+    private float $quantity;
 
     public function __construct()
     {

@@ -1,10 +1,10 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 class StorageInputModel
 {
 
-    private $designation;
+    private string $designation;
 
     public function __construct()
     {

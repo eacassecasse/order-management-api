@@ -1,11 +1,11 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 class ProductIdInputModel
 {
 
-    private $id;
+    private int $id;
 
     public function __construct()
     {

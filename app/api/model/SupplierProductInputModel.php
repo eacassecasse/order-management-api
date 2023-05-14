@@ -1,6 +1,6 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 
 use App\api\model\ProductIdInputModel;
@@ -9,9 +9,9 @@ use App\api\model\SupplierIdInputModel;
 class SupplierProductInputModel
 {
 
-    private $supplier;
-    private $product;
-    private $price;
+    private SupplierIdInputModel $supplier;
+    private ProductIdInputModel $product;
+    private float $price;
 
     public function __construct()
     {

@@ -1,12 +1,12 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 class ProductInputModel
 {
 
-    private $description;
-    private $unit;
+    private string $description;
+    private string $unit;
 
     public function __construct()
     {

@@ -1,12 +1,12 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 class SupplierInputModel
 {
 
-    private $name;
-    private $vatNumber;
+    private string $name;
+    private int $vatNumber;
 
     public function __construct()
     {

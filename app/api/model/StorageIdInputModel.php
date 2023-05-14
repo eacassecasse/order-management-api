@@ -1,11 +1,11 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 class StorageIdInputModel
 {
 
-    private $id;
+    private string $id;
 
     public function __construct()
     {

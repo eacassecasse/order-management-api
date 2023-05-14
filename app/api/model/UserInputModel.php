@@ -1,12 +1,12 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 class UserInputModel
 {
 
-    private $email;
-    private $password;
+    private string $email;
+    private string $password;
 
     public function __construct()
     {
