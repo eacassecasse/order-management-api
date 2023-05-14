@@ -1,3 +1,25 @@
+<p align="justify">
+    <a href="https://google.com" alt="project status">
+        <img src="https://img.shields.io/badge/status-In%20development-green" />
+    </a>
+    <a href="https://github.com/eacassecasse/api.mansto.com/graphs/contributors" alt="Contributors">
+        <img src="https://img.shields.io/github/contributors/eacassecasse/api.mansto.com" />
+    </a>
+    <a href="https://github.com/eacassecasse/api.mansto.com/network/members" alt="forks">
+        <img src="https://img.shields.io/github/forks/eacassecasse/api.mansto.com" />
+    </a>
+    <a href="https://github.com/eacassecasse/api.mansto.com/stars" alt="stars">
+        <img src="https://img.shields.io/github/stars/eacassecasse/api.mansto.com" />
+    </a>
+    <a href="https://github.com/eacassecasse/api.mansto.com/blob/main/LICENSE" alt="license">
+        <img src="https://img.shields.io/badge/License-MIT-orange" />
+    </a>
+</p>
+
+[![GitHub issues by-label](https://img.shields.io/github/issues/eacassecasse/api.mansto.com/good%20first%20issue)](https://github.com/eacassecasse/api.mansto.com/issues)
+![API version](https://img.shields.io/badge/Version-1.0.0-blue)
+
+
 ## API Documentation
 
 
