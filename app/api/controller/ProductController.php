@@ -1,8 +1,6 @@
 <?php
 
-namespace app\api\controller;
-
-use App\api\controller\BaseController;
+namespace App\api\controller;
 
 use App\api\model\ProductInputModel;
 use App\api\model\ProductIdInputModel;
@@ -19,8 +17,6 @@ use App\domain\exception\MYSQLTransactionException;
 
 use App\domain\service\ProductService;
 
-use Hateoas\HateoasBuilder;
-use Hateoas\UrlGenerator\CallableUrlGenerator;
 use Pagerfanta\Adapter\ArrayAdapter;
 use Pagerfanta\Pagerfanta;
 use Hateoas\Representation\CollectionRepresentation;
@@ -28,21 +24,163 @@ use Hateoas\Representation\CollectionRepresentation;
 
 class ProductController extends BaseController
 {
-    private $service;
-    private $hateoas;
+    private ProductService $service;
 
-    public function __construct()
+    public function __construct(string $method)
     {
+        parent::__construct($method);
+
         $this->service = new ProductService();
-
-        $urlGenerator = new CallableUrlGenerator(function ($route, $parameters) {
-            return $route . '?' . http_build_query($parameters);
-        });
-
-        $this->hateoas = HateoasBuilder::create()->setUrlGenerator(null, $urlGenerator)->build();
 
     }
 
+    public function processRequest() {
+        $uriSegments = $this->getUriSegments();
+        $queryStringParams = $this->getQueryStringParams();
+        
+        if (isset($uriSegments[4])) {
+            $id = $uriSegments[4];
+
+            if (isset($uriSegments[5])) {
+                switch ($uriSegments[5]) {
+                    case 'validities':
+                        if (isset($uriSegments[6])) {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $this->view($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                case 'PUT':
+                                    $this->edit($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                case 'DELETE':
+                                    $this->remove($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+                        else {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $page = (isset($queryStringParams['page']) && $queryStringParams['page'] != '') ?
+                                        filter_var($queryStringParams['page'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 1;
+                                    $limit = (isset($queryStringParams['limit']) && $queryStringParams['limit'] != '') ?
+                                        filter_var($queryStringParams['limit'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 10;
+                                    $sorts = isset($queryStringParams['sort']) ? $this->parseSortParams($queryStringParams['sort']) : array(["validity_id", "ASC"]);
+
+                                    $this->listValidities($uriSegments[4], $page, $limit, $sorts);
+                                    break;
+                                case 'POST':
+                                    $this->add($uriSegments[4]);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+
+                        break;
+                    case 'suppliers':
+                        if (isset($uriSegments[6])) {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $this->viewSupplier($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+                        else {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $page = (isset($queryStringParams['page']) && $queryStringParams['page'] != '') ?
+                                        filter_var($queryStringParams['page'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 1;
+                                    $limit = (isset($queryStringParams['limit']) && $queryStringParams['limit'] != '') ?
+                                        filter_var($queryStringParams['limit'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 10;
+                                    $sorts = isset($queryStringParams['sort']) ? $this->parseSortParams($queryStringParams['sort']) : array(["supplier_id", "ASC"]);
+
+                                    $this->listSuppliers($uriSegments[4], $page, $limit, $sorts);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+
+                        break;
+                    case 'storages':
+                        if (isset($uriSegments[6])) {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $this->viewStorage($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+                        else {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $page = (isset($queryStringParams['page']) && $queryStringParams['page'] != '') ?
+                                        filter_var($queryStringParams['page'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 1;
+                                    $limit = (isset($queryStringParams['limit']) && $queryStringParams['limit'] != '') ?
+                                        filter_var($queryStringParams['limit'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 10;
+                                    $sorts = isset($queryStringParams['sort']) ? $this->parseSortParams($queryStringParams['sort']) : array(["storage_id", "ASC"]);
+
+                                    $this->listStorages($uriSegments[4], $page, $limit, $sorts);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+
+                        break;
+                    default:
+                        $this->notFound();
+                        exit();
+                }
+            }
+            else {
+                switch (strtoupper($this->method)) {
+                    case 'GET':
+                        $this->findOne($uriSegments[4]);
+                        break;
+                    case 'PUT':
+                        $this->update($uriSegments[4]);
+                        break;
+                    case 'DELETE':
+                        $this->delete($uriSegments[4]);
+                        break;
+                    default:
+                        $this->methodNotSupported(strtoupper($this->method));
+                        break;
+                }
+            }
+        }
+        else {
+            switch (strtoupper($this->method)) {
+                case 'GET':
+                    $page = (isset($queryStringParams['page']) && $queryStringParams['page'] != '') ?
+                        filter_var($queryStringParams['page'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 1;
+                    $limit = (isset($queryStringParams['limit']) && $queryStringParams['limit'] != '') ?
+                        filter_var($queryStringParams['limit'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 10;
+                    $sorts = isset($queryStringParams['sort']) ? $this->parseSortParams($queryStringParams['sort']) : array(["id", "ASC"]);
+
+                    $this->find($page, $limit, $sorts);
+                    break;
+                case 'POST':
+                    $this->create();
+                    break;
+                default:
+                    $this->methodNotSupported(strtoupper($this->method));
+                    break;
+            }
+        }
+    }
 
     /**
      * @method void create()
@@ -51,7 +189,7 @@ class ProductController extends BaseController
      * 
      * Creates a new product
      */
-    public function create()
+    private function create()
     {
 
         $errorMessage = '';
@@ -119,7 +257,7 @@ class ProductController extends BaseController
      * Get a product by a given ID
      */
 
-    public function findOne($id)
+    private function findOne($id)
     {
         $errorMessage = '';
 
@@ -173,7 +311,7 @@ class ProductController extends BaseController
      * Get a list of products
      */
 
-    public function find($page, $limit, $sorts)
+    private function find($page, $limit, $sorts)
     {
         $errorMessage = '';
 
@@ -237,7 +375,7 @@ class ProductController extends BaseController
      * Updates a product with the given ID
      */
 
-    public function update(int $id)
+    private function update(int $id)
     {
         $errorMessage = '';
         try {
@@ -315,7 +453,7 @@ class ProductController extends BaseController
      * Delete a product with the given ID
      */
 
-    public function delete($id)
+    private function delete($id)
     {
         $errorMessage = '';
 
@@ -368,7 +506,7 @@ class ProductController extends BaseController
      * 
      * Adds a validity to a product with the given ID
      */
-    public function add($productId)
+    private function add($productId)
     {
         $errorMessage = '';
 
@@ -466,7 +604,7 @@ class ProductController extends BaseController
      * 
      * View a validity to a product with the given ID
      */
-    public function view($productId, $validityId)
+    private function view($productId, $validityId)
     {
         $errorMessage = '';
 
@@ -538,7 +676,7 @@ class ProductController extends BaseController
      * Adds a validity to a product with the given ID
      */
 
-    public function listValidities($productId, $page, $limit, $sorts)
+    private function listValidities($productId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
@@ -608,7 +746,7 @@ class ProductController extends BaseController
      * Updates a validity from a product with the given ID
      */
 
-    public function edit($productId, $validityId)
+    private function edit($productId, $validityId)
     {
 
         $errorMessage = '';
@@ -699,7 +837,7 @@ class ProductController extends BaseController
      * Removes a validity from a product with the given ID
      */
 
-    public function remove($productId, $validityId)
+    private function remove($productId, $validityId)
     {
 
         $errorMessage = '';
@@ -760,7 +898,7 @@ class ProductController extends BaseController
      * Get a supplier by its ID of the product with the given ID
      */
 
-    public function viewSupplier($productId, $supplierId)
+    private function viewSupplier($productId, $supplierId)
     {
         $errorMessage = '';
 
@@ -825,7 +963,7 @@ class ProductController extends BaseController
      * Get a list of supplier of the product with the given ID
      */
 
-    public function listSuppliers($productId, $page, $limit, $sorts)
+    private function listSuppliers($productId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
@@ -896,7 +1034,7 @@ class ProductController extends BaseController
      * Get a list of storages of the product with the given ID
      */
 
-    public function listStorages($productId, $page, $limit, $sorts)
+    private function listStorages($productId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
@@ -966,7 +1104,7 @@ class ProductController extends BaseController
      * Get a storage by its ID of the product with the given ID
      */
 
-    public function viewStorage($productId, $storageId)
+    private function viewStorage($productId, $storageId)
     {
         $errorMessage = '';
 
@@ -1021,20 +1159,6 @@ class ProductController extends BaseController
             )
             );
         }
-    }
-
-    public function methodNotSupported($requestMethod)
-    {
-        $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', $requestMethod);
-        $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
-
-        $this->sendOutput(
-            json_encode(array(
-            'error' => $errorMessage
-        )), array(
-            'Content-Type: application/json', $errorHeader
-        )
-        );
     }
 
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 use JMS\Serializer\Annotation as Serializer;
 use Hateoas\Configuration\Annotation as Hateoas;
@@ -82,7 +82,7 @@ class ProductOutputModel implements \JsonSerializable
         $this->totalQuantity = $totalQuantity;
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize(): array
     {
         return [
             'id' => $this->getId(),

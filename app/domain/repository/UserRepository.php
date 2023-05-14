@@ -3,6 +3,7 @@
 namespace app\domain\repository;
 
 use App\domain\exception\BusinessException;
+use app\domain\exception\ConnectionException;
 use App\domain\exception\MYSQLTransactionException;
 use App\domain\model\User;
 use App\domain\repository\GenericRepository;
@@ -19,7 +20,12 @@ class UserRepository extends GenericRepository
         parent::__construct();
     }
 
-    public function create($object)
+    /**
+     * @throws MYSQLTransactionException
+     * @throws BusinessException
+     * @throws ConnectionException
+     */
+    public function create($object): bool|array|null
     {
 
         $connection = $this->connect();
@@ -63,66 +69,10 @@ class UserRepository extends GenericRepository
         return $user;
     }
 
-    public function findAll(int $page, int $limit, array $sorts)
-    {
-
-        try {
-
-            $offset = ($limit * $page) - $limit;
-
-            $query = "SELECT 
-                            * 
-                        FROM 
-                            user 
-                        ORDER BY 
-                            {$this->getOrderByString($sorts)} 
-                        LIMIT ?,?";
-
-            $result = $this->select(
-                $query,
-                array($offset, $limit)
-            );
-
-
-            if ($result->num_rows === 0) {
-                $users = null;
-            }
-
-            $users = array();
-
-            while ($user = $result->fetch_assoc()) {
-                array_push($users, $user);
-            }
-        }
-        catch (\mysqli_sql_exception $ex) {
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-
-        return $users;
-    }
-
-    public function findOne($id)
-    {
-        try {
-
-            $query = "SELECT * FROM user WHERE id = ?";
-
-            $result = $this->select($query, array($id));
-
-            if ($result->num_rows === 0) {
-                $user = null;
-            }
-
-            $user = $result->fetch_assoc();
-        }
-        catch (\mysqli_sql_exception $ex) {
-            throw new MYSQLTransactionException($ex->getMessage());
-        }
-
-        return $user;
-    }
-
-    public function findByEmail($email)
+    /**
+     * @throws MYSQLTransactionException
+     */
+    public function existsByEmail($email): bool|array|null
     {
         try {
 
@@ -131,7 +81,7 @@ class UserRepository extends GenericRepository
             $result = $this->select($query, array($email));
 
             if ($result->num_rows === 0) {
-                $user = null;
+                return false;
             }
 
             $user = $result->fetch_assoc();
@@ -143,7 +93,12 @@ class UserRepository extends GenericRepository
         return $user;
     }
 
-    public function update($object)
+    /**
+     * @throws BusinessException
+     * @throws MYSQLTransactionException
+     * @throws ConnectionException
+     */
+    public function update($object): bool|array|null
     {
 
         $connection = $this->connect();
@@ -180,9 +135,9 @@ class UserRepository extends GenericRepository
                 $user = null;
             }
 
-            $user = $this->findOne($id);
+            $user = $this->existsByEmail($email);
         }
-        catch (\mysqli_sql_exception $ex) {
+        catch (\mysqli_sql_exception | MYSQLTransactionException $ex) {
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }
@@ -190,7 +145,11 @@ class UserRepository extends GenericRepository
         return $user;
     }
 
-    public function delete($id)
+    /**
+     * @throws MYSQLTransactionException
+     * @throws ConnectionException
+     */
+    public function delete($id): bool
     {
 
         $connection = $this->connect();

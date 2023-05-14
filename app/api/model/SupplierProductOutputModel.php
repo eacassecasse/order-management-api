@@ -1,6 +1,6 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 use App\api\model\ProductOutputModel;
 use App\api\model\SupplierOutputModel;
@@ -66,7 +66,7 @@ class SupplierProductOutputModel implements \JsonSerializable
         $this->price = $price;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'product' => $this->getProduct(),

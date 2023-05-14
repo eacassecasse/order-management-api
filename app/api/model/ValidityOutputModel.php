@@ -1,5 +1,5 @@
 <?php
-namespace app\api\model;
+namespace App\api\model;
 
 use App\api\model\ProductOutputModel;
 
@@ -71,7 +71,7 @@ class ValidityOutputModel implements \JsonSerializable
         $this->product = $product;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'id' => $this->getId(),

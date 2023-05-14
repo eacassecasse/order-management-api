@@ -1,8 +1,6 @@
 <?php
 
-namespace app\api\controller;
-
-use App\api\controller\BaseController;
+namespace App\api\controller;
 
 use App\api\model\StorageInputModel;
 use App\api\model\StorageIdInputModel;
@@ -20,8 +18,6 @@ use App\domain\exception\MYSQLTransactionException;
 
 use App\domain\service\StorageService;
 
-use Hateoas\HateoasBuilder;
-use Hateoas\UrlGenerator\CallableUrlGenerator;
 use Pagerfanta\Adapter\ArrayAdapter;
 use Pagerfanta\Pagerfanta;
 use Hateoas\Representation\CollectionRepresentation;
@@ -30,21 +26,103 @@ use Hateoas\Representation\CollectionRepresentation;
 class StorageController extends BaseController
 {
 
-    private $service;
-    private $hateoas;
+    private StorageService $service;
 
-    public function __construct()
+    public function __construct(string $method)
     {
+        parent::__construct($method);
+
         $this->service = new StorageService();
-
-        $urlGenerator = new CallableUrlGenerator(function ($route, $parameters) {
-            return $route . '?' . http_build_query($parameters);
-        });
-
-        $this->hateoas = HateoasBuilder::create()->setUrlGenerator(null, $urlGenerator)->build();
-
     }
 
+    public function processRequest() {
+        $uriSegments = $this->getUriSegments();
+        $queryStringParams = $this->getQueryStringParams();
+
+        if (isset($uriSegments[4])) {
+            if (isset($uriSegments[5])) {
+                switch ($uriSegments[5]) {
+                    case 'products':
+                        if (isset($uriSegments[6])) {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $this->view($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                case 'PUT':
+                                    $this->edit($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                case 'DELETE':
+                                    $this->remove($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+                        else {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $page = (isset($queryStringParams['page']) && $queryStringParams['page'] != '') ?
+                                        filter_var($queryStringParams['page'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 1;
+                                    $limit = (isset($queryStringParams['limit']) && $queryStringParams['limit'] != '') ?
+                                        filter_var($queryStringParams['limit'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 10;
+                                    $sorts = isset($queryStringParams['sort']) ? $this->parseSortParams($queryStringParams['sort']) : array(["product_id", "ASC"]);
+
+                                    $this->list($uriSegments[4], $page, $limit, $sorts);
+                                    break;
+                                case 'POST':
+                                    $this->add($uriSegments[4]);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+
+                        break;
+
+                    default:
+                        $this->notFound();
+                        exit();
+                }
+            }
+            else {
+                switch (strtoupper($this->method)) {
+                    case 'GET':
+                        $this->findOne($uriSegments[4]);
+                        break;
+                    case 'PUT':
+                        $this->update($uriSegments[4]);
+                        break;
+                    case 'DELETE':
+                        $this->delete($uriSegments[4]);
+                        break;
+                    default:
+                        $this->methodNotSupported(strtoupper($this->method));
+                        break;
+                }
+            }
+        }
+        else {
+            switch (strtoupper($this->method)) {
+                case 'GET':
+                    $page = (isset($queryStringParams['page']) && $queryStringParams['page'] != '') ?
+                        filter_var($queryStringParams['page'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 1;
+                    $limit = (isset($queryStringParams['limit']) && $queryStringParams['limit'] != '') ?
+                        filter_var($queryStringParams['limit'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 10;
+                    $sorts = isset($queryStringParams['sort']) ? $this->parseSortParams($queryStringParams['sort']) : array(["id", "ASC"]);
+
+                    $this->find($page, $limit, $sorts);
+                    break;
+                case 'POST':
+                    $this->create();
+                    break;
+                default:
+                    $this->methodNotSupported(strtoupper($this->method));
+                    break;
+            }
+        }
+    }
 
     /**
      * @method void create()
@@ -53,7 +131,7 @@ class StorageController extends BaseController
      * 
      * Creates a new storage
      */
-    public function create()
+    private function create()
     {
 
         $errorMessage = '';
@@ -112,7 +190,7 @@ class StorageController extends BaseController
      * or code passing one of this variable as a query parameters
      */
 
-    public function findOne($id = null)
+    private function findOne($id = null)
     {
         $errorMessage = '';
 
@@ -165,7 +243,7 @@ class StorageController extends BaseController
      * Get a list of storages
      */
 
-    public function find($page, $limit, $sorts)
+    private function find($page, $limit, $sorts)
     {
         $errorMessage = '';
 
@@ -227,7 +305,7 @@ class StorageController extends BaseController
      * Updates a storage with the given ID
      */
 
-    public function update(int $id)
+    private function update(int $id)
     {
         $errorMessage = '';
 
@@ -296,7 +374,7 @@ class StorageController extends BaseController
      * Delete a storage with the given ID
      */
 
-    public function delete($id)
+    private function delete($id)
     {
         $errorMessage = '';
 
@@ -349,7 +427,7 @@ class StorageController extends BaseController
      * 
      * Adds a product to a storage with the given ID
      */
-    public function add($storageId)
+    private function add($storageId)
     {
         $errorMessage = '';
 
@@ -436,7 +514,7 @@ class StorageController extends BaseController
      * 
      * Adds a product to a storage with the given ID
      */
-    public function view($storageId, $productId)
+    private function view($storageId, $productId)
     {
         $errorMessage = '';
 
@@ -500,7 +578,7 @@ class StorageController extends BaseController
      * Adds a product to a storage with the given ID
      */
 
-    public function list($storageId, $page, $limit, $sorts)
+    private function list($storageId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
@@ -579,7 +657,7 @@ class StorageController extends BaseController
      * Updates a product from a storage with the given ID
      */
 
-    public function edit($storageId, $productId)
+    private function edit($storageId, $productId)
     {
 
         $errorMessage = '';
@@ -657,7 +735,7 @@ class StorageController extends BaseController
      * Removes a product from a storage with the given ID
      */
 
-    public function remove($storageId, $productId)
+    private function remove($storageId, $productId)
     {
 
         $errorMessage = '';
@@ -714,19 +792,5 @@ class StorageController extends BaseController
             )
             );
         }
-    }
-
-    public function methodNotSupported($requestMethod)
-    {
-        $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', $requestMethod);
-        $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
-
-        $this->sendOutput(
-            json_encode(array(
-            'error' => $errorMessage
-        )), array(
-            'Content-Type: application/json', $errorHeader
-        )
-        );
     }
 }

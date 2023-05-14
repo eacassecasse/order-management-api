@@ -13,7 +13,6 @@ class User extends ObjectModel
 
     public function __construct()
     {
-
     }
 
     public function getId(): ?int

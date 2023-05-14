@@ -1,6 +1,6 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 use JMS\Serializer\Annotation as Serializer;
 use Hateoas\Configuration\Annotation as Hateoas;
@@ -55,7 +55,7 @@ class SupplierOutputModel implements \JsonSerializable
         $this->vatNumber = $vatNumber;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'id' => $this->getId(),

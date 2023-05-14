@@ -1,6 +1,6 @@
 <?php
 
-namespace app\domain\service;
+namespace App\domain\service;
 
 use App\api\model\UserInputModel;
 
@@ -10,6 +10,7 @@ use App\domain\exception\BusinessException;
 use app\domain\exception\ConnectionException;
 use App\domain\exception\EntityNotFoundException;
 
+use App\domain\exception\MYSQLTransactionException;
 use App\domain\model\User;
 
 use App\domain\repository\UserRepository;
@@ -17,8 +18,11 @@ use App\domain\repository\UserRepository;
 class UserService
 {
 
-    private $repository;
+    private UserRepository $repository;
 
+    /**
+     * @throws ConnectionException
+     */
     public function __construct()
     {
         try {
@@ -29,6 +33,11 @@ class UserService
         }
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws BusinessException
+     * @throws ConnectionException
+     */
     public function create(?UserInputModel $inputModel): ?User
     {
 
@@ -37,7 +46,7 @@ class UserService
         $user->setPassword($inputModel->getPassword());
 
         $found = Utilities::toUser(
-            $this->repository->findByEmail($user->getEmail())
+            $this->repository->existsByEmail($user->getEmail())
         );
 
         if (($found) && ($found->__equals($user))) {
@@ -47,10 +56,14 @@ class UserService
         return Utilities::toUser($this->repository->create($user));
     }
 
-    public function findOne(?int $id): User
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
+    public function existsByEmail(string $email): ?User
     {
 
-        $user = Utilities::toUser($this->repository->findOne($id));
+        $user = Utilities::toUser($this->repository->existsByEmail($email));
 
         if (!($user)) {
             throw new EntityNotFoundException('User Not Found');
@@ -59,30 +72,11 @@ class UserService
         return $user;
     }
 
-    public function findEmail(?string $email): ?User
-    {
-
-        $user = Utilities::toUser($this->repository->findByEmail($email));
-
-        if (!($user)) {
-            throw new EntityNotFoundException('User Not Found');
-        }
-
-        return $user;
-    }
-
-    public function findAll(int $page, int $limit, array $sorts): ?array
-    {
-
-        $users = Utilities::toUserCollection($this->repository->findAll($page, $limit, $sorts));
-
-        if (!($users)) {
-            throw new EntityNotFoundException('Could not find any User');
-        }
-
-        return $users;
-    }
-
+    /**
+     * @throws MYSQLTransactionException
+     * @throws BusinessException
+     * @throws EntityNotFoundException
+     */
     public function update(?int $id, ?UserInputModel $inputModel): ?User
     {
 
@@ -90,7 +84,7 @@ class UserService
         $user->setEmail($inputModel->getEmail());
         $user->setPassword($inputModel->getPassword());
 
-        $found = $this->findOne($id);
+        $found = $this->existsByEmail($user->getEmail());
 
         $found->setEmail($user->getEmail());
         $found->setPassword($user->getPassword());
@@ -104,6 +98,11 @@ class UserService
         return $updatedUser;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws ConnectionException
+     * @throws EntityNotFoundException
+     */
     public function delete(?int $id): ?bool
     {
         $user = $this->findOne($id);

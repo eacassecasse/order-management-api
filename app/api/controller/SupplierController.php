@@ -1,6 +1,6 @@
 <?php
 
-namespace app\api\controller;
+namespace App\api\controller;
 
 use App\api\controller\BaseController;
 
@@ -32,21 +32,106 @@ use Hateoas\Representation\CollectionRepresentation;
 class SupplierController extends BaseController
 {
 
-    private $service;
-    private $hateoas;
+    private SupplierService $service;
 
-    public function __construct()
+    public function __construct(string $method)
     {
+        parent::__construct($method);
+
         $this->service = new SupplierService();
-
-        $urlGenerator = new CallableUrlGenerator(function ($route, $parameters) {
-            return $route . '?' . http_build_query($parameters);
-        });
-
-        $this->hateoas = HateoasBuilder::create()->setUrlGenerator(null, $urlGenerator)->build();
-
     }
 
+    /**
+     * @throws BusinessException
+     */
+    public function processRequest() {
+        $uriSegments = $this->getUriSegments();
+        $queryStringParams = $this->getQueryStringParams();
+
+        if (isset($uriSegments[4])) {
+            if (isset($uriSegments[5])) {
+                switch ($uriSegments[5]) {
+                    case 'products':
+                        if (isset($uriSegments[6])) {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $this->view($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                case 'PUT':
+                                    $this->edit($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                case 'DELETE':
+                                    $this->remove($uriSegments[4], $uriSegments[6]);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+                        else {
+                            switch ($this->method) {
+                                case 'GET':
+                                    $page = (isset($queryStringParams['page']) && $queryStringParams['page'] != '') ?
+                                        filter_var($queryStringParams['page'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 1;
+                                    $limit = (isset($queryStringParams['limit']) && $queryStringParams['limit'] != '') ?
+                                        filter_var($queryStringParams['limit'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 10;
+                                    $sorts = isset($queryStringParams['sort']) ? $this->parseSortParams($queryStringParams['sort']) : array(["product_id", "ASC"]);
+
+                                    $this->list($uriSegments[4], $page, $limit, $sorts);
+                                    break;
+                                case 'POST':
+                                    $this->add($uriSegments[4]);
+                                    break;
+                                default:
+                                    $this->methodNotSupported(strtoupper($this->method));
+                                    break;
+                            }
+                        }
+
+                        break;
+
+                    default:
+                        $this->notFound();
+                        exit();
+                }
+            }
+            else {
+                switch (strtoupper($this->method)) {
+                    case 'GET':
+                        $this->findOne($uriSegments[4]);
+                        break;
+                    case 'PUT':
+                        $this->update($uriSegments[4]);
+                        break;
+                    case 'DELETE':
+                        $this->delete($uriSegments[4]);
+                        break;
+                    default:
+                        $this->methodNotSupported(strtoupper($this->method));
+                        break;
+                }
+            }
+        }
+        else {
+            switch (strtoupper($this->method)) {
+                case 'GET':
+                    $page = (isset($queryStringParams['page']) && $queryStringParams['page'] != '') ?
+                        filter_var($queryStringParams['page'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 1;
+                    $limit = (isset($queryStringParams['limit']) && $queryStringParams['limit'] != '') ?
+                        filter_var($queryStringParams['limit'], FILTER_SANITIZE_NUMBER_INT, array(FILTER_VALIDATE_INT)) : 10;
+                    $sorts = isset($queryStringParams['sort']) ? $this->parseSortParams($queryStringParams['sort']) : array(["id", "ASC"]);
+
+                    $this->find($page, $limit, $sorts);
+                    break;
+                case 'POST':
+                    $this->create();
+                    break;
+                default:
+                    $this->methodNotSupported(strtoupper($this->method));
+                    break;
+            }
+        }
+    }
 
     /**
      * @method void create()
@@ -55,7 +140,7 @@ class SupplierController extends BaseController
      * 
      * Creates a new supplier
      */
-    public function create()
+    private function create()
     {
 
         $errorMessage = '';
@@ -72,11 +157,11 @@ class SupplierController extends BaseController
                 throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
             }
 
-            if (!$vatNumber and (!$name || substr($name, 0, 1) === ' ')) {
+            if (!$vatNumber and (!$name || str_starts_with($name, ' '))) {
                 throw new BusinessException('Please provide valid values for name and vatNumber [Not Null and Not Blank or Greater than 0].');
             }
 
-            if (!$name || substr($name, 0, 1) === ' ') {
+            if (!$name || str_starts_with($name, ' ')) {
                 throw new BusinessException('Please provide valid value for name [Not Null and Not Blank].');
             }
 
@@ -121,7 +206,7 @@ class SupplierController extends BaseController
      * Get a supplier by a given ID
      */
 
-    public function findOne($id = null)
+    private function findOne($id = null)
     {
         $errorMessage = '';
 
@@ -176,7 +261,7 @@ class SupplierController extends BaseController
      * Get a list of suppliers
      */
 
-    public function find($page, $limit, $sorts)
+    private function find($page, $limit, $sorts)
     {
         $errorMessage = '';
 
@@ -240,7 +325,7 @@ class SupplierController extends BaseController
      * Updates a supplier with the given ID
      */
 
-    public function update(int $id)
+    private function update(int $id)
     {
         $errorMessage = '';
 
@@ -315,7 +400,7 @@ class SupplierController extends BaseController
      * Delete a supplier with the given ID
      */
 
-    public function delete($id)
+    private function delete($id)
     {
         $errorMessage = '';
 
@@ -368,7 +453,7 @@ class SupplierController extends BaseController
      * 
      * Adds a product to a supplier with the given ID
      */
-    public function add($supplierId)
+    private function add($supplierId)
     {
         $errorMessage = '';
 
@@ -453,7 +538,7 @@ class SupplierController extends BaseController
      * 
      * Adds a product to a supplier with the given ID
      */
-    public function view($supplierId, $productId)
+    private function view($supplierId, $productId)
     {
         $errorMessage = '';
 
@@ -517,7 +602,7 @@ class SupplierController extends BaseController
      * Adds a product to a supplier with the given ID
      */
 
-    public function list($supplierId, $page, $limit, $sorts)
+    private function list($supplierId, $page, $limit, $sorts)
     {
 
         $errorMessage = '';
@@ -591,7 +676,7 @@ class SupplierController extends BaseController
      * Updates a product from a supplier with the given ID
      */
 
-    public function edit($supplierId, $productId)
+    private function edit($supplierId, $productId)
     {
 
         $errorMessage = '';
@@ -678,7 +763,7 @@ class SupplierController extends BaseController
      * Removes a product from a supplier with the given ID
      */
 
-    public function remove($supplierId, $productId)
+    private function remove($supplierId, $productId)
     {
 
         $errorMessage = '';
@@ -734,20 +819,6 @@ class SupplierController extends BaseController
             )
             );
         }
-    }
-
-    public function methodNotSupported($requestMethod)
-    {
-        $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', $requestMethod);
-        $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
-
-        $this->sendOutput(
-            json_encode(array(
-            'error' => $errorMessage
-        )), array(
-            'Content-Type: application/json', $errorHeader
-        )
-        );
     }
 
 }

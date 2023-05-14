@@ -3,6 +3,7 @@
 namespace app\domain\repository;
 
 use App\domain\exception\BusinessException;
+use app\domain\exception\ConnectionException;
 use App\domain\exception\MYSQLTransactionException;
 use App\domain\model\Storage;
 use App\domain\repository\GenericRepository;
@@ -152,6 +153,7 @@ class StorageRepository extends GenericRepository
 
         return $storages;
     }
+
     public function update($object)
     {
 
@@ -198,6 +200,10 @@ class StorageRepository extends GenericRepository
         return $storage;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws ConnectionException
+     */
     public function delete($id)
     {
 
@@ -216,7 +222,7 @@ class StorageRepository extends GenericRepository
 
             return true;
         }
-        catch (\mysqli_sql_exception $ex) {
+        catch (\mysqli_sql_exception | MYSQLTransactionException $ex) {
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }

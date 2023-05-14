@@ -3,6 +3,7 @@
 namespace app\domain\repository;
 
 use App\domain\exception\BusinessException;
+use app\domain\exception\ConnectionException;
 use App\domain\exception\MYSQLTransactionException;
 use App\domain\model\Product;
 use App\domain\repository\GenericRepository;
@@ -18,6 +19,11 @@ class ProductRepository extends GenericRepository
         parent::__construct();
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws BusinessException
+     * @throws ConnectionException
+     */
     public function create($object)
     {
 

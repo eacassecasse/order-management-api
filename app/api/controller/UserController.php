@@ -26,19 +26,12 @@ use Hateoas\Configuration\Route;
 
 class UserController extends BaseController
 {
-    private $service;
-    private $hateoas;
+    private UserService $service;
 
-    public function __construct()
+    public function __construct(string $method)
     {
+        parent::__construct($method);
         $this->service = new UserService();
-
-        $urlGenerator = new CallableUrlGenerator(function ($route, $parameters) {
-            return $route . '?' . http_build_query($parameters);
-        });
-
-        $this->hateoas = HateoasBuilder::create()->setUrlGenerator(null, $urlGenerator)->build();
-
     }
 
 
@@ -53,66 +46,7 @@ class UserController extends BaseController
     {
 
         $errorMessage = '';
-        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (strtoupper($requestMethod) == 'POST') {
-            try {
-
-                $data = json_decode(file_get_contents("php://input"));
-
-                if (isset($data)) {
-                    $email = isset($data->email) ? filter_var($this->clean($data->email), FILTER_VALIDATE_EMAIL) : '';
-                    $password = isset($data->password) ? $this->clean($data->password) : '';
-                }
-                else {
-                    throw new BusinessException('Please provide valid values for email and password [Not Null and Not Blank].');
-                }
-
-                if (!$email && !$password) {
-                    throw new BusinessException('Please provide valid values for email and password [Not Null and Not Blank].');
-                }
-
-                if (!$email || substr($email, 0, 1) === ' ') {
-                    throw new BusinessException('Please provide valid value for email [Not Null and Not Blank].');
-                }
-
-                if (!$password) {
-                    throw new BusinessException('Please provide valid value for password [Not Null and Not Blank].');
-                }
-
-
-                $model = new UserInputModel();
-                $model->setEmail($email);
-                $model->setPassword(password_hash($password, PASSWORD_DEFAULT));
-
-                $outputModel = $this->hateoas->serialize(
-                    Utilities::toUserOutputModel($this->service->create($model)), 'json');
-
-            }
-            catch (ConnectionException $connectionException) {
-                $errorMessage = ApiExceptionHandler::handleConnectionException($connectionException);
-                $errorHeader = 'HTTT/1.1 500 Internal Server Error';
-            }
-            catch (BusinessException $businessException) {
-                $errorMessage = ApiExceptionHandler::handleBusinessException($businessException);
-                $errorHeader = 'HTTP/1.1 400 Bad Request';
-            }
-        }
-        else {
-            $errorMessage = ApiExceptionHandler::handleMethodNotSupported('Method not supported', strtoupper($requestMethod));
-            $errorHeader = 'HTTP/1.1 405 Method Not Allowed';
-        }
-
-        //Send Output
-        if (!($errorMessage)) {
-            $this->sendOutput($outputModel, array('Content-Type: application/json', 'HTTP/1.1 201 Created'));
-        }
-        else {
-            $this->sendOutput(
-                json_encode(
-                array('error' => $errorMessage)
-                , JSON_PRETTY_PRINT), array('Content-Type: application/json', $errorHeader));
-        }
     }
 
     /**

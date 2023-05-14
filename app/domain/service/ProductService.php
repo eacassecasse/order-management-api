@@ -1,6 +1,6 @@
 <?php
 
-namespace app\domain\service;
+namespace App\domain\service;
 
 use App\api\model\ProductInputModel;
 use App\api\model\ValidityInputModel;
@@ -11,6 +11,7 @@ use App\domain\exception\ConnectionException;
 use App\domain\exception\BusinessException;
 use App\domain\exception\EntityNotFoundException;
 
+use App\domain\exception\MYSQLTransactionException;
 use App\domain\model\Product;
 use App\domain\model\StoredProduct;
 use App\domain\model\SupplierProduct;
@@ -26,11 +27,14 @@ use app\domain\model\Storage;
 class ProductService
 {
 
-    private $repository;
-    private $validityRepository;
-    private $supplierProductRepository;
-    private $storedProductRepository;
+    private ProductRepository $repository;
+    private ValidityRepository $validityRepository;
+    private SupplierProductRepository $supplierProductRepository;
+    private StoredProductRepository $storedProductRepository;
 
+    /**
+     * @throws ConnectionException
+     */
     public function __construct()
     {
         try {
@@ -44,6 +48,10 @@ class ProductService
         }
     }
 
+    /**
+     * @throws BusinessException
+     * @throws MYSQLTransactionException
+     */
     public function create(?ProductInputModel $inputModel): ?Product
     {
 
@@ -56,13 +64,13 @@ class ProductService
         $options = array('description' => $inputModel->getDescription());
 
         $founds = Utilities::toProductCollection(
-            $this->repository->findByParams($options, 1, 5000, array(["id", "asc"]))
+            $this->repository->findByParams($options, 1, 2, array(["id", "asc"]))
         );
 
         if ($founds) {
             foreach ($founds as $found) {
                 if (($found) && ($found->__equals($product))) {
-                    throw new BusinessException('Product alredy exists!');
+                    throw new BusinessException('Product already exists!');
                 }
             }
         }
@@ -70,6 +78,10 @@ class ProductService
         return Utilities::toProduct($this->repository->create($product));
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findOne(?int $id): ?Product
     {
 
@@ -82,6 +94,10 @@ class ProductService
         return $product;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByDescription(array $options, int $page, int $limit, array $sorts): ?array
     {
 
@@ -97,6 +113,10 @@ class ProductService
     }
 
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByUnit(array $options, int $page, int $limit, array $sorts): ?array
     {
 
@@ -111,6 +131,10 @@ class ProductService
         return $products;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByDescriptionAndUnit(array $options, int $page, int $limit, array $sorts): ?array
     {
 
@@ -124,6 +148,11 @@ class ProductService
 
         return $products;
     }
+
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByLowestPrice(array $options, int $page, int $limit, array $sorts): ?array
     {
 
@@ -138,6 +167,10 @@ class ProductService
         return $products;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByUnitAndLowestPrice(array $options, int $page, int $limit, array $sorts): ?array
     {
 
@@ -152,6 +185,10 @@ class ProductService
         return $products;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByDescriptionAndLowestPrice(
         array $options,
         int $page,
@@ -170,6 +207,10 @@ class ProductService
         return $products;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByDescriptionAndUnitAndLowestPrice(
         array $options,
         int $page,
@@ -188,6 +229,10 @@ class ProductService
         return $products;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByTotalQuantity(
         array $options,
         int $page,
@@ -206,6 +251,10 @@ class ProductService
         return $products;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByDescriptionAndTotalQuantity(
         array $options,
         int $page,
@@ -224,6 +273,10 @@ class ProductService
         return $products;
     }
 
+    /**
+     * @throws MYSQLTransactionException
+     * @throws EntityNotFoundException
+     */
     public function findByUnitAndTotalQuantity(
         array $options,
         int $page,

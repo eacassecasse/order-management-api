@@ -1,6 +1,6 @@
 <?php
 
-namespace app\api\model;
+namespace App\api\model;
 
 use App\api\model\ProductOutputModel;
 use App\api\model\StorageOutputModel;
@@ -66,7 +66,7 @@ class StoredProductOutputModel implements \JsonSerializable
         $this->quantity = $quantity;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'product' => $this->getProduct(),
