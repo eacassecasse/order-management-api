@@ -1,11 +1,11 @@
 <?php
 
-namespace app\domain\repository;
+namespace App\domain\repository;
 
 use App\core\shared\Utilities;
 use App\domain\exception\BusinessException;
 use App\domain\exception\MYSQLTransactionException;
-use App\domain\model\Validity;
+use App\domain\model\Order;
 use App\domain\repository\GenericRepository;
 
 $driver = new \mysqli_driver();
@@ -26,7 +26,7 @@ class ValidityRepository extends GenericRepository
         $connection->autocommit(false);
         $connection->begin_transaction();
 
-        if (!$object instanceof Validity) {
+        if (!$object instanceof Order) {
             throw new BusinessException("Unknown Entity Found");
         }
 
@@ -213,7 +213,7 @@ class ValidityRepository extends GenericRepository
         $connection->autocommit(false);
         $connection->begin_transaction();
 
-        if (!$object instanceof Validity) {
+        if (!$object instanceof Order) {
             throw new BusinessException("Unknown Entity Found");
         }
 

@@ -2,22 +2,22 @@
 
 namespace App\api\model;
 
-class SupplierIdInputModel
+class UserIdInputModel
 {
 
-    private int $id;
+    private string $id;
 
     public function __construct()
     {
 
     }
 
-    public function getId(): ?int
+    public function getId(): ?string
     {
         return $this->id;
     }
 
-    public function setId(?int $id)
+    public function setId(?string $id)
     {
         $this->id = $id;
     }

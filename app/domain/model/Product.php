@@ -1,104 +1,48 @@
 <?php
 
-namespace app\domain\model;
+namespace App\domain\model;
 
-use App\domain\model\ObjectModel;
 
 class Product extends ObjectModel
 {
 
-    private $id;
-    private $description;
-    private $unit;
-    private $lowestPrice;
-    private $totalQuantity;
-    private $validities = [];
-    private $suppliers = [];
-    private $storages = [];
+    private string $id;
+    private string $descricao;
+    private float $preco;
 
     public function __construct()
     {
 
     }
 
-    public function getId(): ?int
+    public function getId(): string
     {
         return $this->id;
     }
 
-    public function getDescription(): ?string
+    public function getDescricao(): string
     {
-        return $this->description;
+        return $this->descricao;
     }
 
-    public function getUnit(): ?string
+    public function getPreco(): ?float
     {
-        return $this->unit;
+        return $this->preco;
     }
 
-    public function getLowestPrice(): ?float
-    {
-        return $this->lowestPrice;
-    }
-
-    public function getTotalQuantity(): ?float
-    {
-        return $this->totalQuantity;
-    }
-
-    public function getValidities(): ?array
-    {
-        return $this->validities;
-    }
-
-    public function getSuppliers(): ?array
-    {
-        return $this->suppliers;
-    }
-
-    public function getStorages(): ?array
-    {
-        return $this->storages;
-    }
-
-    public function setId(?int $id)
+    public function setId(string $id)
     {
         $this->id = $id;
     }
 
-    public function setDescription(?string $description)
+    public function setDescricao(string $descricao)
     {
-        $this->description = $description;
+        $this->descricao = $descricao;
     }
 
-    public function setUnit(?string $unit)
+    public function setPreco(float $preco)
     {
-        $this->unit = $unit;
-    }
-
-    public function setLowestPrice(?float $lowestPrice)
-    {
-        $this->lowestPrice = $lowestPrice;
-    }
-
-    public function setTotalQuantity(?float $totalQuantity)
-    {
-        $this->totalQuantity = $totalQuantity;
-    }
-
-    public function setValidities(?array $validities)
-    {
-        $this->validities = $validities;
-    }
-
-    public function setSuppliers(?array $suppliers)
-    {
-        $this->suppliers = $suppliers;
-    }
-
-    public function setStorages(?array $storages)
-    {
-        $this->storages = $storages;
+        $this->preco = $preco;
     }
 
     public function __equals($object): ?bool
@@ -116,8 +60,8 @@ class Product extends ObjectModel
             return false;
         }
 
-        return $object->getDescription() == $this->getDescription() &&
-            $object->getUnit() == $this->getUnit();
+        return $object->getDescricao() == $this->getDescricao() &&
+            $object->getPreco() == $this->getPreco();
     }
 
 }

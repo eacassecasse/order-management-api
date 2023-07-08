@@ -1,17 +1,16 @@
 <?php
 
-namespace app\domain\repository;
+namespace App\domain\repository;
 
 use App\domain\exception\BusinessException;
 use app\domain\exception\ConnectionException;
 use App\domain\exception\MYSQLTransactionException;
-use App\domain\model\Product;
-use App\domain\repository\GenericRepository;
+use App\domain\model\Produto;
 
-$driver = new \mysqli_driver();
+$driver = ;
 $driver->report_mode = \MYSQLI_REPORT_ERROR | \MYSQLI_REPORT_STRICT;
 
-class ProductRepository extends GenericRepository
+class ProdutoRepository extends GenericRepository
 {
 
     public function __construct()
@@ -31,24 +30,23 @@ class ProductRepository extends GenericRepository
         $connection->autocommit(false);
         $connection->begin_transaction();
 
-        if (!$object instanceof Product) {
-            throw new BusinessException('Unknown Entity Found');
+        if (!$object instanceof Produto) {
+            throw new BusinessException('Entidade não encontrada');
         }
 
-        $description = $object->getDescription();
-        $unit = $object->getUnit();
-        $lowestPrice = $object->getLowestPrice();
-        $totalQuantity = $object->getTotalQuantity();
+        $id = $object->getId();
+        $descricao = $object->getDescricao();
+        $preco = $object->getPreco();
 
         try {
 
-            $query = "INSERT INTO product
-                   (description, measure_unit, lowest_price, total_quantity)
-                    VALUES (?,?,?,?)";
+            $query = "INSERT INTO produto
+                   (id, descricao, preco)
+                    VALUES (?,?,?)";
 
             $statement = $this->executeStatement(
                 $query,
-                array($description, $unit, $lowestPrice, $totalQuantity)
+                array($id, $descricao, $preco)
             );
 
             $connection->commit();
@@ -59,12 +57,10 @@ class ProductRepository extends GenericRepository
                     array($statement->insert_id)
                 )->fetch_assoc();
             }
-        }
-        catch (\mysqli_sql_exception $ex) {
+        } catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
-        }
-        finally {
+        } finally {
             $statement->close();
         }
 
@@ -101,8 +97,7 @@ class ProductRepository extends GenericRepository
                 array_push($products, $product);
             }
 
-        }
-        catch (\mysqli_sql_exception $ex) {
+        } catch (\mysqli_sql_exception $ex) {
             throw new MYSQLTransactionException($ex->getMessage());
         }
 
@@ -122,8 +117,7 @@ class ProductRepository extends GenericRepository
             }
 
             $product = $result->fetch_assoc();
-        }
-        catch (\mysqli_sql_exception $ex) {
+        } catch (\mysqli_sql_exception $ex) {
             throw new MYSQLTransactionException($ex->getMessage());
         }
 
@@ -157,8 +151,7 @@ class ProductRepository extends GenericRepository
             while ($product = $result->fetch_assoc()) {
                 array_push($products, $product);
             }
-        }
-        catch (\mysqli_sql_exception $ex) {
+        } catch (\mysqli_sql_exception $ex) {
             throw new MYSQLTransactionException($ex->getMessage());
         }
 
@@ -172,12 +165,12 @@ class ProductRepository extends GenericRepository
         $connection->autocommit(false);
         $connection->begin_transaction();
 
-        if (!$object instanceof Product) {
+        if (!$object instanceof Produto) {
             throw new BusinessException("Unknown Entity Found");
         }
 
         $id = $object->getId();
-        $description = $object->getDescription();
+        $description = $object->getDescricao();
         $unit = $object->getUnit();
         $lowestPrice = $object->getLowestPrice();
         $totalQuantity = $object->getTotalQuantity();
@@ -206,8 +199,7 @@ class ProductRepository extends GenericRepository
             }
 
             $product = $this->findOne($id);
-        }
-        catch (\mysqli_sql_exception $ex) {
+        } catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }
@@ -232,8 +224,7 @@ class ProductRepository extends GenericRepository
             }
 
             return true;
-        }
-        catch (\mysqli_sql_exception $ex) {
+        } catch (\mysqli_sql_exception $ex) {
             $connection->rollback();
             throw new MYSQLTransactionException($ex->getMessage());
         }

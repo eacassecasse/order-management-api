@@ -1,48 +1,81 @@
 <?php
 
-namespace app\domain\model;
+namespace App\domain\model;
 
-use App\domain\model\ObjectModel;
-
-class User extends ObjectModel
+class Usuario extends ObjectModel
 {
 
-    private $id;
-    private $email;
-    private $password;
+    private string $id;
+    private string $nome;
+    private string $email;
+    private int $pin;
 
     public function __construct()
     {
     }
 
-    public function getId(): ?int
+    /**
+     * @return mixed
+     */
+    public function getId(): string
     {
         return $this->id;
     }
 
-    public function getEmail(): ?string
-    {
-        return $this->email;
-    }
-
-    public function getPassword(): ?string
-    {
-        return $this->password;
-    }
-
-    public function setId(?int $id)
+    /**
+     * @param mixed $id
+     */
+    public function setId(string $id): void
     {
         $this->id = $id;
     }
 
-    public function setEmail(?string $email)
+    /**
+     * @return mixed
+     */
+    public function getNome(): string
+    {
+        return $this->nome;
+    }
+
+    /**
+     * @param mixed $nome
+     */
+    public function setNome(string $nome): void
+    {
+        $this->nome = $nome;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getEmail(): string
+    {
+        return $this->email;
+    }
+
+    /**
+     * @param mixed $email
+     */
+    public function setEmail(string $email): void
     {
         $this->email = $email;
     }
 
-    public function setPassword(?string $password)
+    /**
+     * @return mixed
+     */
+    public function getPin(): int
     {
-        $this->password = $password;
+        return $this->pin;
+    }
+
+    /**
+     * @param mixed $pin
+     */
+    public function setPin(int $pin): void
+    {
+        $this->pin = $pin;
     }
 
     public function __equals($object): ?bool
@@ -56,7 +89,7 @@ class User extends ObjectModel
             return true;
         }
 
-        if (!($object instanceof User)) {
+        if (!($object instanceof Usuario)) {
             return false;
         }
 

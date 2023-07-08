@@ -2,7 +2,7 @@
 
 namespace App\api\model;
 
-class StorageIdInputModel
+class UserIdInputModel
 {
 
     private string $id;
@@ -12,12 +12,12 @@ class StorageIdInputModel
 
     }
 
-    public function getId(): ?int
+    public function getId(): ?string
     {
         return $this->id;
     }
 
-    public function setId(?int $id)
+    public function setId(?string $id)
     {
         $this->id = $id;
     }
